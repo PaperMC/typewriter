@@ -1,0 +1,7 @@
+imports:
+  single:
+    - "java.util.List"
+
+staticImports:
+  global:
+    - "javax.lang.model.SourceVersion"

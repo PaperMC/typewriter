@@ -1,0 +1,12 @@
+imports:
+  single:
+    - "java.util.List"
+    - "java.util.random.RandomGenerator.JumpableGenerator"
+  global:
+    - "java.util"
+
+staticImports:
+  single:
+    - "javax.lang.model.SourceVersion.RELEASE_21"
+  global:
+    - "javax.lang.model.SourceVersion"

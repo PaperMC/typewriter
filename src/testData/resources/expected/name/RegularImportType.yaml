@@ -1,0 +1,8 @@
+shortNames: {
+  "java.util.List": "List",
+}
+
+memberShortNames: {
+  "javax.lang.model.SourceVersion.RELEASE_21": "RELEASE_21",
+  "javax.lang.model.SourceVersion.valueOf": "valueOf",
+}

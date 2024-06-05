@@ -1,0 +1,6 @@
+shortNames: {
+  "name.SamePackageClass": "SamePackageClass",
+  "name.one.OneDepthClass": "OneDepthClass",
+  "name.one.OneDepthClass$NonStaticClass": "OneDepthClass.NonStaticClass",
+  "name.one.OneDepthClass$StaticClass": "OneDepthClass.StaticClass"
+}

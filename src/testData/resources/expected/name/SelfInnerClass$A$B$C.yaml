@@ -1,0 +1,5 @@
+shortNames: {
+  "name.SelfInnerClass$A": "A",
+  "name.SelfInnerClass$A$B": "B",
+  "name.SelfInnerClass$A$B$C": "C",
+}
