@@ -32,7 +32,6 @@ out/
 *~
 
 # other stuff
-run/
 logs/
 
 !gradle/wrapper/gradle-wrapper.jar

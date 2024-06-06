@@ -26,7 +26,7 @@ public record ReplaceOptions(
      * @param startCommentMarker the start comment where the replacement will start to happen
      * @param endCommentMarker the end comment where the replacement will terminate
      * @return the builder
-     * @apiNote the singe line comment prefix ("// ") is not needed in the comment marker and
+     * @apiNote single line comment prefix ("// ") is not needed in the comment and
      * cannot be changed here.
      */
     @Contract(value = "_, _ -> new", pure = true)
@@ -37,9 +37,9 @@ public record ReplaceOptions(
     /**
      * Specify the replace options for a rewriter.
      *
-     * @param commentMarker the only comment marker where the replacement will be delimited by
+     * @param commentMarker the only comment where the replacement will be delimited by (twice)
      * @return the builder
-     * @apiNote the singe line comment prefix ("// ") is not needed in the comment marker and
+     * @apiNote single line comment prefix ("// ") is not needed in the comment and
      * cannot be changed here.
      */
     @Contract(value = "_ -> new", pure = true)

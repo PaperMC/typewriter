@@ -18,7 +18,7 @@ public interface SourceRewriter {
     /**
      * Apply this rewriter to a source file
      *
-     * @param parent the parent of the source file (a sourceset path)
+     * @param parent the parent of the source file (a source set path)
      * @param file the source file
      * @throws IOException if an I/O error occur
      */
