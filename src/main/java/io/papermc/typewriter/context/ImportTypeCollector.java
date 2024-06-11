@@ -4,6 +4,7 @@ import io.papermc.typewriter.ClassNamed;
 import io.papermc.typewriter.parser.StringReader;
 import io.papermc.typewriter.utils.Formatting;
 import org.jetbrains.annotations.VisibleForTesting;
+
 import java.lang.reflect.Modifier;
 import java.util.HashMap;
 import java.util.HashSet;

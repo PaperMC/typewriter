@@ -12,9 +12,9 @@ import io.papermc.typewriter.parser.StringReader;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.framework.qual.DefaultQualifier;
-import org.jetbrains.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -31,7 +31,7 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
     private static final Logger LOGGER = LoggerFactory.getLogger(SearchReplaceRewriterBase.class);
 
     @Override
-    public void writeToFile(final Path parent, final Path writeFolder, final SourceFile file) throws IOException {
+    public void writeToFile(Path parent, Path writeFolder, SourceFile file) throws IOException {
         Path filePath = file.path();
 
         Path path = parent.resolve(filePath);
@@ -143,10 +143,10 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
                     unusedRewriters.remove(foundRewriter);
                     foundRewriter = null;
                 } else {
-                    if (marker.indent() % source.indentUnit().size() != 0) {
+                    if (marker.indentSize() % source.indentUnit().size() != 0) {
                         throw new IllegalStateException("Generated start comment is not properly indented at line " + (i + 1) + " for rewriter " + marker.owner().getName() + " in " + source.mainClass().canonicalName());
                     }
-                    indent = " ".repeat(marker.indent()); // update indent based on the comments for flexibility
+                    indent = " ".repeat(marker.indentSize()); // update indent based on the comments for flexibility
 
                     foundRewriter = marker.owner();
                     if (!foundRewriter.options.exactReplacement()) {
@@ -216,14 +216,4 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
     }
 
     public abstract Set<SearchReplaceRewriter> getRewriters();
-
-    @VisibleForTesting
-    public boolean hasGeneratedComment() {
-        for (SearchReplaceRewriter rewriter : this.getRewriters()) {
-            if (rewriter.hasGeneratedComment()) {
-                return true;
-            }
-        }
-        return false;
-    }
 }

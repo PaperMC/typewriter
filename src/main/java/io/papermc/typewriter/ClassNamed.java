@@ -2,11 +2,15 @@ package io.papermc.typewriter;
 
 import com.google.common.base.Preconditions;
 import io.papermc.typewriter.utils.ClassHelper;
-import org.checkerframework.checker.nullness.qual.Nullable;
-import org.jetbrains.annotations.Contract;
 import javax.lang.model.SourceVersion;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
+import org.checkerframework.framework.qual.DefaultQualifier;
+import org.jetbrains.annotations.Contract;
+
 import java.util.Objects;
 
+@DefaultQualifier(NonNull.class)
 public record ClassNamed(String packageName, String simpleName, String dottedNestedName, @Nullable Class<?> knownClass) {
 
     public ClassNamed(Class<?> knownClass) {
@@ -26,7 +30,7 @@ public record ClassNamed(String packageName, String simpleName, String dottedNes
      * Creates a class named object.
      *
      * @param packageName the package name
-     * @param name the class name
+     * @param name        the class name
      * @return the new object
      * @apiNote nested classes are delimited by '$' character and
      * class name using such character would be interpreted as is too.
@@ -51,7 +55,7 @@ public record ClassNamed(String packageName, String simpleName, String dottedNes
      * Creates a class named object.
      *
      * @param packageName the package name
-     * @param name the root class name
+     * @param name        the root class name
      * @param nestedNames the nested class names
      * @return the new object
      */
@@ -145,6 +149,6 @@ public record ClassNamed(String packageName, String simpleName, String dottedNes
             return this.knownClass == other.knownClass;
         }
         return this.packageName.equals(other.packageName) &&
-               this.dottedNestedName.equals(other.dottedNestedName);
+            this.dottedNestedName.equals(other.dottedNestedName);
     }
 }

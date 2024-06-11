@@ -3,6 +3,7 @@ package io.papermc.typewriter.parser;
 import io.papermc.typewriter.context.ImportCollector;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.jupiter.api.Tag;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;

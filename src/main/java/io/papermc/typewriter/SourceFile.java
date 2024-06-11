@@ -1,10 +1,14 @@
 package io.papermc.typewriter;
 
 import com.google.common.base.Preconditions;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.framework.qual.DefaultQualifier;
 import org.jetbrains.annotations.Contract;
+
 import java.nio.file.Path;
 import java.util.Iterator;
 
+@DefaultQualifier(NonNull.class)
 public record SourceFile(ClassNamed mainClass, Path path, IndentUnit indentUnit) {
 
     public SourceFile {

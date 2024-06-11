@@ -5,6 +5,7 @@ import io.papermc.typewriter.SourceFile;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.framework.qual.DefaultQualifier;
 import org.jetbrains.annotations.Contract;
+
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;

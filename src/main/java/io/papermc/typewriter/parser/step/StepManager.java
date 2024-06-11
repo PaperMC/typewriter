@@ -3,6 +3,7 @@ package io.papermc.typewriter.parser.step;
 import io.papermc.typewriter.parser.LineParser;
 import io.papermc.typewriter.parser.StringReader;
 import org.checkerframework.checker.nullness.qual.Nullable;
+
 import java.util.ArrayDeque;
 import java.util.Deque;
 

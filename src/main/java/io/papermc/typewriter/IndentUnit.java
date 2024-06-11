@@ -3,12 +3,14 @@ package io.papermc.typewriter;
 import com.google.common.base.Preconditions;
 import io.papermc.typewriter.utils.Formatting;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.framework.qual.DefaultQualifier;
 import org.jetbrains.annotations.Contract;
 
+@DefaultQualifier(NonNull.class)
 public record IndentUnit(String content, int size, char character) implements CharSequence {
 
     @Contract(value = "_ -> new", pure = true)
-    public static IndentUnit parseUnsafe(@NonNull String content) {
+    public static IndentUnit parseUnsafe(String content) {
         return new IndentUnit(content, content.length(), content.charAt(0));
     }
 
@@ -27,7 +29,7 @@ public record IndentUnit(String content, int size, char character) implements Ch
      * @see io.papermc.typewriter.SourceFile
      */
     @Contract(value = "_ -> new", pure = true)
-    public static IndentUnit parse(@NonNull String content) {
+    public static IndentUnit parse(String content) {
         Preconditions.checkArgument(!content.isEmpty(), "Indent unit cannot be empty!");
         char c0 = content.charAt(0);
         int size = content.length();
@@ -47,13 +49,13 @@ public record IndentUnit(String content, int size, char character) implements Ch
     }
 
     @Override
-    public char charAt(final int index) {
+    public char charAt(int index) {
         Preconditions.checkElementIndex(index, this.size);
         return this.character; // mixed character are not allowed
     }
 
     @Override
-    public @NonNull CharSequence subSequence(final int beginIndex, final int endIndex) {
+    public CharSequence subSequence(int beginIndex, int endIndex) {
         return this.content.subSequence(beginIndex, endIndex);
     }
 

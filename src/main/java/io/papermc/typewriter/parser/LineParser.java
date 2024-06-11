@@ -6,12 +6,13 @@ import io.papermc.typewriter.parser.closure.AbstractClosure;
 import io.papermc.typewriter.parser.closure.Closure;
 import io.papermc.typewriter.parser.closure.ClosureType;
 import io.papermc.typewriter.parser.step.StepManager;
-import io.papermc.typewriter.parser.step.model.AnnotationSkipSteps;
-import io.papermc.typewriter.parser.step.model.ImportStatementSteps;
+import io.papermc.typewriter.parser.step.sequence.AnnotationSkipSteps;
+import io.papermc.typewriter.parser.step.sequence.ImportStatementSteps;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.framework.qual.DefaultQualifier;
 import org.jetbrains.annotations.ApiStatus;
+
 import java.util.List;
 
 @ApiStatus.Internal

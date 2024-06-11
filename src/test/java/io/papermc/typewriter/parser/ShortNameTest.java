@@ -4,12 +4,6 @@ import io.papermc.typewriter.ClassNamed;
 import io.papermc.typewriter.context.ImportTypeCollector;
 import io.papermc.typewriter.yaml.ImportShortNameMapping;
 import io.papermc.typewriter.yaml.YamlMappingConverter;
-import io.papermc.typewriter.utils.ClassHelper;
-import java.io.IOException;
-import java.nio.file.Path;
-import java.util.Map;
-import java.util.stream.Stream;
-
 import name.GlobalImportType;
 import name.PackageClassImportType;
 import name.RegularImportType;
@@ -21,6 +15,11 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.converter.ConvertWith;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.Map;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -58,9 +57,9 @@ public class ShortNameTest extends ParserTest {
     @ParameterizedTest
     @MethodSource("fileProvider")
     public void testTypeName(Path path,
-                            Class<?> sampleClass,
-                            String name,
-                            @ConvertWith(ImportShortNameMappingConverter.class) ImportShortNameMapping mapping) throws IOException {
+                             Class<?> sampleClass,
+                             String name,
+                             @ConvertWith(ImportShortNameMappingConverter.class) ImportShortNameMapping mapping) throws IOException {
         final ImportTypeCollector importCollector = new ImportTypeCollector(new ClassNamed(sampleClass));
         parseFile(path, importCollector);
 

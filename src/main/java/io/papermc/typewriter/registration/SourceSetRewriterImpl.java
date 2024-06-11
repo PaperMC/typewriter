@@ -2,6 +2,7 @@ package io.papermc.typewriter.registration;
 
 import io.papermc.typewriter.SourceFile;
 import io.papermc.typewriter.SourceRewriter;
+
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Collections;
@@ -18,7 +19,7 @@ public class SourceSetRewriterImpl<T extends SourceSetRewriter<T>> implements So
     }
 
     @Override
-    public T register(final SourceFile source, final SourceRewriter rewriter) {
+    public T register(SourceFile source, SourceRewriter rewriter) {
         if (rewriter.registerFor(source)) {
             this.rewrites.put(source, rewriter);
         }
@@ -26,7 +27,7 @@ public class SourceSetRewriterImpl<T extends SourceSetRewriter<T>> implements So
     }
 
     @Override
-    public void apply(final Path output) throws IOException {
+    public void apply(Path output) throws IOException {
         for (Map.Entry<SourceFile, SourceRewriter> rewriter : this.rewrites.entrySet()) {
             rewriter.getValue().writeToFile(output, rewriter.getKey());
         }

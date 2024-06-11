@@ -9,6 +9,7 @@ import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Contract;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import java.util.Collections;
 import java.util.Set;
 
@@ -38,11 +39,11 @@ public class SearchReplaceRewriter extends SearchReplaceRewriterBase {
         return this;
     }
 
-    public @NonNull String getName() {
+    public String getName() {
         return this.name;
     }
 
-    public @NonNull ReplaceOptions getOptions() {
+    public ReplaceOptions getOptions() {
         return this.options;
     }
 
@@ -58,7 +59,6 @@ public class SearchReplaceRewriter extends SearchReplaceRewriterBase {
         throw new UnsupportedOperationException("This rewriter (" + this.getClass().getCanonicalName() + ") doesn't support exact replacement!");
     }
 
-    @Override
     public boolean hasGeneratedComment() {
         return !this.options.exactReplacement() && this.options.generatedComment().isPresent();
     }

@@ -1,12 +1,12 @@
-package io.papermc.typewriter.parser.step.model;
+package io.papermc.typewriter.parser.step.sequence;
 
 import io.papermc.typewriter.context.ImportCollector;
 import io.papermc.typewriter.parser.LineParser;
 import io.papermc.typewriter.parser.ParserException;
 import io.papermc.typewriter.parser.ProtoTypeName;
+import io.papermc.typewriter.parser.StringReader;
 import io.papermc.typewriter.parser.step.IterativeStep;
 import io.papermc.typewriter.parser.step.StepHolder;
-import io.papermc.typewriter.parser.StringReader;
 import io.papermc.typewriter.utils.Formatting;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 

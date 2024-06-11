@@ -4,12 +4,12 @@ import io.papermc.typewriter.SourceFile;
 import io.papermc.typewriter.replace.SearchMetadata;
 import io.papermc.typewriter.replace.SearchReplaceRewriter;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+
 import java.util.Iterator;
 
 public abstract class SwitchCaseRewriter extends SearchReplaceRewriter {
 
-    @MonotonicNonNull
-    private Iterator<String> cases;
+    private @MonotonicNonNull Iterator<String> cases;
 
     protected abstract Iterable<String> getCases();
 
@@ -28,12 +28,12 @@ public abstract class SwitchCaseRewriter extends SearchReplaceRewriter {
     }
 
     @Override
-    protected void replaceLine(final SearchMetadata metadata, final StringBuilder builder) {
+    protected void replaceLine(SearchMetadata metadata, StringBuilder builder) {
         appendCase(builder, metadata);
     }
 
     @Override
-    protected void insert(final SearchMetadata metadata, final StringBuilder builder) {
+    protected void insert(SearchMetadata metadata, StringBuilder builder) {
         while (this.cases.hasNext()) {
             appendCase(builder, metadata);
         }

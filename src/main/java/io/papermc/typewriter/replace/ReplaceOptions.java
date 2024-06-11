@@ -5,6 +5,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.framework.qual.DefaultQualifier;
 import org.jetbrains.annotations.Contract;
+
 import java.util.Optional;
 
 @DefaultQualifier(NonNull.class)
@@ -24,7 +25,7 @@ public record ReplaceOptions(
      * Specify the replace options for a rewriter.
      *
      * @param startCommentMarker the start comment where the replacement will start to happen
-     * @param endCommentMarker the end comment where the replacement will terminate
+     * @param endCommentMarker   the end comment where the replacement will terminate
      * @return the builder
      * @apiNote single line comment prefix ("// ") is not needed in the comment and
      * cannot be changed here.

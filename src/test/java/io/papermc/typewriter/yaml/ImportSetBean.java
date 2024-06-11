@@ -1,6 +1,7 @@
 package io.papermc.typewriter.yaml;
 
 import io.papermc.typewriter.context.ImportSet;
+
 import java.util.Collections;
 import java.util.Set;
 

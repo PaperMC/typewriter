@@ -3,6 +3,7 @@ package io.papermc.typewriter.registration;
 import io.papermc.typewriter.SourceFile;
 import io.papermc.typewriter.SourceRewriter;
 import org.jetbrains.annotations.VisibleForTesting;
+
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Map;

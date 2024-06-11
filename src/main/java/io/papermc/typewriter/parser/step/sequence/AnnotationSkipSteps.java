@@ -1,16 +1,17 @@
-package io.papermc.typewriter.parser.step.model;
+package io.papermc.typewriter.parser.step.sequence;
 
 import io.papermc.typewriter.parser.ClosureAdvanceResult;
 import io.papermc.typewriter.parser.LineParser;
 import io.papermc.typewriter.parser.ParserException;
 import io.papermc.typewriter.parser.ProtoTypeName;
+import io.papermc.typewriter.parser.StringReader;
 import io.papermc.typewriter.parser.closure.Closure;
 import io.papermc.typewriter.parser.closure.ClosureType;
 import io.papermc.typewriter.parser.step.IterativeStep;
 import io.papermc.typewriter.parser.step.StepHolder;
-import io.papermc.typewriter.parser.StringReader;
 import io.papermc.typewriter.utils.Formatting;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;

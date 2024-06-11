@@ -15,6 +15,7 @@ import io.papermc.typewriter.context.ImportTypeCollector;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.regex.Matcher;
@@ -55,22 +56,23 @@ public class ParserFirstClassScopeAreaTest extends ParserTest {
     @ParameterizedTest
     @MethodSource("fileProvider")
     public void testFirstClassScope(Path path,
-                            Class<?> sampleClass,
-                            String name) throws IOException {
+                                    Class<?> sampleClass,
+                                    String name) throws IOException {
         final ImportTypeCollector importCollector = new ImportTypeCollector(new ClassNamed(sampleClass));
 
         parseFile(path, importCollector, line -> {
-            String textLine = line.getString();
-            Matcher matcher = EXPECTED_LINE.matcher(textLine);
-            if (matcher.find()) {
-                int cursor = Integer.parseInt(matcher.group("cursor"));
-                assertEquals(cursor, line.getCursor(), "Parser didn't stop at the expected cursor for " + name);
-            } else {
-                fail("Parser didn't stop at the expected line, for " + name + "! found: " + textLine);
+                String textLine = line.getString();
+                Matcher matcher = EXPECTED_LINE.matcher(textLine);
+                if (matcher.find()) {
+                    int cursor = Integer.parseInt(matcher.group("cursor"));
+                    assertEquals(cursor, line.getCursor(), "Parser didn't stop at the expected cursor for " + name);
+                } else {
+                    fail("Parser didn't stop at the expected line, for " + name + "! found: " + textLine);
+                }
+            },
+            () -> {
+                fail("File is empty or doesn't contains the required top scope needed for this test to run");
             }
-        },
-        () -> {
-            fail("File is empty or doesn't contains the required top scope needed for this test to run");
-        });
+        );
     }
 }

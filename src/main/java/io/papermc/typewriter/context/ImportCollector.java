@@ -6,22 +6,22 @@ public interface ImportCollector {
 
     ImportCollector NO_OP = new ImportCollector() {
         @Override
-        public void addImport(final String typeName) {
+        public void addImport(String typeName) {
 
         }
 
         @Override
-        public void addStaticImport(final String fullName) {
+        public void addStaticImport(String fullName) {
 
         }
 
         @Override
-        public String getStaticMemberShortName(final String fullName) {
+        public String getStaticMemberShortName(String fullName) {
             return fullName;
         }
 
         @Override
-        public String getShortName(final ClassNamed type) {
+        public String getShortName(ClassNamed type) {
             return type.canonicalName();
         }
 

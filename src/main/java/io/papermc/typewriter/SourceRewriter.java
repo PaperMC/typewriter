@@ -19,7 +19,7 @@ public interface SourceRewriter {
      * Apply this rewriter to a source file
      *
      * @param parent the parent of the source file (a source set path)
-     * @param file the source file
+     * @param file   the source file
      * @throws IOException if an I/O error occur
      */
     default void writeToFile(Path parent, SourceFile file) throws IOException {
@@ -29,6 +29,7 @@ public interface SourceRewriter {
     /**
      * Only used by Paper for new rewriter use {@link #writeToFile(Path, SourceFile)}
      */
-    @Deprecated // used only for paper test
+    @Deprecated
+    // used only for paper test
     void writeToFile(Path readFolder, Path writeFolder, SourceFile file) throws IOException;
 }
