@@ -1,5 +1,7 @@
 shortNames: {
   "java.util.List": "List",
+  "java.lang.Boolean": "Boolean",
+  "java.lang.Character$Subset": "Character.Subset"
 }
 
 memberShortNames: {

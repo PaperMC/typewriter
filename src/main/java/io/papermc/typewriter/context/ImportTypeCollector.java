@@ -13,6 +13,8 @@ import java.util.Set;
 
 public class ImportTypeCollector implements ImportCollector {
 
+    private static final String JAVA_LANG_PACKAGE = "java.lang";
+
     private final Map<ClassNamed, String> typeCache = new HashMap<>();
 
     private final Set<String> imports = new HashSet<>();
@@ -103,6 +105,10 @@ public class ImportTypeCollector implements ImportCollector {
     @Override
     public String getShortName(ClassNamed type) {
         return this.typeCache.computeIfAbsent(type, key -> {
+            if (key.packageName().equals(JAVA_LANG_PACKAGE)) { // auto-import
+                return key.dottedNestedName();
+            }
+
             if (key.knownClass() != null && Modifier.isStatic(key.knownClass().getModifiers())) {
                 // this is only supported when the class is known for now but generally static imports should stick to member of class not the class itself
                 String name = getShortName0(key, this.staticImports.keySet(), this.globalStaticImports, true);

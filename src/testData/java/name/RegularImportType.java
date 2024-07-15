@@ -9,5 +9,7 @@ public class RegularImportType {
         var a = List.of();
         var b = RELEASE_21;
         valueOf(b.name());
+        Boolean c = true;
+        Character.Subset subset;
     }
 }
