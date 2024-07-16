@@ -81,7 +81,7 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
         Set<SearchReplaceRewriter> unusedRewriters = new HashSet<>(rewriters);
         @Nullable StringBuilder strippedContent = null;
 
-        final ImportCollector importCollector = new ImportTypeCollector(source.mainClass());
+        final ImportCollector importCollector = new ImportTypeCollector(source.mainClass()); // todo should be the rewritten class instead
         final LineParser lineParser = new LineParser();
 
         @Nullable String indent = null;

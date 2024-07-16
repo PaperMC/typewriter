@@ -1,14 +1,13 @@
 package io.papermc.typewriter.context;
 
 import io.papermc.typewriter.ClassNamed;
-import io.papermc.typewriter.parser.StringReader;
-import io.papermc.typewriter.utils.Formatting;
 import org.jetbrains.annotations.VisibleForTesting;
 
 import java.lang.reflect.Modifier;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 public class ImportTypeCollector implements ImportCollector {
@@ -66,88 +65,66 @@ public class ImportTypeCollector implements ImportCollector {
         return fullName;
     }
 
-    private String getShortName0(ClassNamed type, Set<String> imports, Set<String> globalImports, boolean fetchStatic) {
+    private Optional<String> getShortName0(ClassNamed type, Set<String> imports, Set<String> globalImports, boolean unusualStaticImport) {
         ClassNamed foundClass = type;
-        int advancedNode = 0;
         while (!imports.contains(foundClass.canonicalName()) &&
             !globalImports.contains(foundClass.enclosing().canonicalName())) {
-            if (foundClass.isRoot() || // top classes with package check is handled before
-                (fetchStatic && !Modifier.isStatic(foundClass.knownClass().getModifiers())) // static imports are allowed for regular class too but only when the inner classes are all static
+            if (foundClass.isRoot() ||
+                (unusualStaticImport && !Modifier.isStatic(foundClass.knownClass().getModifiers())) // static imports are allowed for regular class too but only when the inner classes are all static
             ) {
                 foundClass = null;
                 break;
             }
             foundClass = foundClass.enclosing();
-            advancedNode++;
         }
+
         if (foundClass != null) {
-            String typeName;
-            if (advancedNode > 0) { // direct inner class import
-                String originalNestedName = type.dottedNestedName();
-                int skipNode = Formatting.countOccurrences(originalNestedName, '.') - advancedNode;
-                StringReader reader = new StringReader(originalNestedName);
-                while (skipNode > 0) {
-                    reader.skipStringUntil('.');
-                    reader.skip(); // skip dot
-                    skipNode--;
-                }
-                typeName = reader.getRemaining();
-            } else {
-                typeName = type.simpleName();
-            }
-
-            return typeName;
+            return Optional.of(type.dottedNestedName().substring(foundClass.dottedNestedName().length() - foundClass.simpleName().length()));
         }
 
-        return type.canonicalName();
+        if (!unusualStaticImport && globalImports.contains(type.packageName())) { // star import on package
+            return Optional.of(type.dottedNestedName());
+        }
+
+        return Optional.empty();
     }
 
     @Override
     public String getShortName(ClassNamed type) {
         return this.typeCache.computeIfAbsent(type, key -> {
-            if (key.packageName().equals(JAVA_LANG_PACKAGE)) { // auto-import
-                return key.dottedNestedName();
-            }
-
-            if (key.knownClass() != null && Modifier.isStatic(key.knownClass().getModifiers())) {
+            Optional<String> shortName = getShortName0(key, this.imports, this.globalImports, false); // regular import
+            if (shortName.isEmpty() && key.knownClass() != null && Modifier.isStatic(key.knownClass().getModifiers())) {
                 // this is only supported when the class is known for now but generally static imports should stick to member of class not the class itself
-                String name = getShortName0(key, this.staticImports.keySet(), this.globalStaticImports, true);
-                if (!name.equals(key.canonicalName())) {
-                    return name;
+                shortName = getShortName0(key, this.staticImports.keySet(), this.globalStaticImports, true);
+            }
+
+            return shortName.orElseGet(() -> {
+                // import have priority over those implicit things
+                if (key.packageName().equals(JAVA_LANG_PACKAGE)) { // auto-import
+                    return key.dottedNestedName();
                 }
-            }
 
-            if ((key.enclosing().isRoot() && this.globalImports.contains(key.packageName())) ||  // star import on package for top classes and one level classes only!
-                (key.isRoot() && key.packageName().equals(this.rewriteClass.packageName()))) {  // same package don't need fqn too for top classes
-                return key.dottedNestedName();
-            }
-
-            // self classes (with inner classes)
-            // todo rework this logic order should be smth like: root stuff -> regular import -> inner stuff (-> static import if valid)
-            // and remove the implicit part too
-            Set<String> currentImports = this.imports;
-            if (key.packageName().equals(this.rewriteClass.packageName()) &&
-                this.rewriteClass.root().equals(key.root())) {
-                int depth = Formatting.countOccurrences(key.dottedNestedName(), '.');
-                int fromDepth = Formatting.countOccurrences(this.rewriteClass.dottedNestedName(), '.');
-                if (fromDepth < depth) {
-                    ClassNamed parent = key;
-                    while (true) {
-                        ClassNamed up = parent.enclosing();
-                        if (this.rewriteClass.equals(up)) {
-                            break;
-                        }
-                        parent = up;
-                    }
-                    currentImports = new HashSet<>(this.imports);
-                    currentImports.add(parent.canonicalName()); // implicit import
-                } else {
-                    return type.simpleName();
+                // self classes (with inner classes)
+                if (this.rewriteClass.root().equals(key.root())) {
+                    return getInnerShortName(this.rewriteClass, key);
                 }
-            }
 
-            return getShortName0(key, currentImports, this.globalImports, false);
+                if (key.packageName().equals(this.rewriteClass.packageName())) { // same package don't need fqn too
+                    return key.dottedNestedName();
+                }
+                return key.canonicalName();
+            });
         });
+    }
+
+    private String getInnerShortName(ClassNamed fromType, ClassNamed targetType) {
+        int fromLen = fromType.dottedNestedName().length();
+        int targetLen = targetType.dottedNestedName().length();
+        if (targetLen > fromLen) {
+            return targetType.dottedNestedName().substring(fromLen + 1); // reference sibling class
+        } else {
+            return targetType.simpleName(); // reference enclosing class or self
+        }
     }
 
     @VisibleForTesting

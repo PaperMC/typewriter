@@ -7,6 +7,12 @@ public class OneDepthClass {
     }
 
     public class NonStaticClass {
+        public class Inner {
+
+        }
+    }
+
+    public class NonStaticClass2 {
 
     }
 }

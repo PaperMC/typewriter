@@ -1,5 +1,7 @@
 shortNames: {
-  "name.one.OneDepthClass$NonStaticClass": "NonStaticClass"
+  "name.one.OneDepthClass$NonStaticClass": "NonStaticClass",
+  "name.one.OneDepthClass$NonStaticClass$Inner": "NonStaticClass.Inner",
+  "name.one.OneDepthClass$NonStaticClass2": "OneDepthClass.NonStaticClass2"
 }
 
 memberShortNames: {

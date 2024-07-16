@@ -1,6 +1,7 @@
 package name;
 
 import java.util.List;
+import java.lang.Character.UnicodeScript;
 import static javax.lang.model.SourceVersion.RELEASE_21;
 import static javax.lang.model.SourceVersion.valueOf;
 
@@ -11,5 +12,6 @@ public class RegularImportType {
         valueOf(b.name());
         Boolean c = true;
         Character.Subset subset;
+        UnicodeScript script;
     }
 }
