@@ -71,7 +71,7 @@ public record SwitchCases(@Nullable List<String> values, CodeBlock content, bool
 
             if (this.arrow) {
                 builder.append(" -> ");
-                if (this.content.codeLines().size() > 1) {
+                if (this.content.fullLines().size() > 1) {
                     needCurlyBrackets = true;
                 }
             } else {
@@ -146,11 +146,12 @@ public record SwitchCases(@Nullable List<String> values, CodeBlock content, bool
 
         @Contract(value = "-> new", pure = true)
         public SwitchCases build() {
+            Preconditions.checkState(this.content != null, "Switch case must have a defined content.");
             List<String> values = new ArrayList<>(this.values);
             if (this.comparator != null) {
                 values.sort(this.comparator);
             }
-            return new SwitchCases(List.copyOf(values), this.content, this.inlined, this.arrow);
+            return new SwitchCases(values, this.content, this.inlined, this.arrow);
         }
     }
 }

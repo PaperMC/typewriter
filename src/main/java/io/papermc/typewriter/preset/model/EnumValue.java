@@ -1,19 +1,17 @@
 package io.papermc.typewriter.preset.model;
 
 import io.papermc.typewriter.IndentUnit;
-import io.papermc.typewriter.utils.Formatting;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.jetbrains.annotations.Contract;
 
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
-public record EnumValue(String name, Collection<String> arguments, @Nullable CodeBlock body) implements CodeEmitter {
+public record EnumValue(String name, List<String> arguments, @Nullable CodeBlock body) implements CodeEmitter {
 
-    public EnumValue(String name, Collection<String> arguments, @Nullable CodeBlock body) {
+    public EnumValue(String name, List<String> arguments, @Nullable CodeBlock body) {
         this.name = name;
         this.arguments = List.copyOf(arguments);
         this.body = body;
@@ -22,11 +20,6 @@ public record EnumValue(String name, Collection<String> arguments, @Nullable Cod
     @Contract(value = "_ -> new", pure = true)
     public static EnumValue value(String name) {
         return new EnumValue(name, Collections.emptyList(), null);
-    }
-
-    @Contract(value = "_ -> new", pure = true)
-    public static EnumValue value(Object name) {
-        return value(Formatting.asCode(name));
     }
 
     @Contract(value = "_ -> new", pure = true)
@@ -52,8 +45,8 @@ public record EnumValue(String name, Collection<String> arguments, @Nullable Cod
     public static final class Builder {
 
         private final String name;
-        private Collection<String> arguments = Collections.emptyList();
-        private Function<String, String> nameTransformer = name -> name;
+        private List<String> arguments = Collections.emptyList();
+        private UnaryOperator<String> nameTransformer = name -> name;
         private @Nullable CodeBlock body;
 
         private Builder(String name) {
@@ -62,13 +55,7 @@ public record EnumValue(String name, Collection<String> arguments, @Nullable Cod
 
         @Contract(value = "_ -> this", mutates = "this")
         public Builder argument(String argument) {
-            this.arguments = Collections.singletonList(argument);
-            return this;
-        }
-
-        @Contract(value = "_ -> this", mutates = "this")
-        public Builder arg(Object argument) {
-            return argument(Formatting.asCode(argument));
+            return arguments(Collections.singletonList(argument));
         }
 
         @Contract(value = "_ -> this", mutates = "this")
@@ -77,23 +64,13 @@ public record EnumValue(String name, Collection<String> arguments, @Nullable Cod
         }
 
         @Contract(value = "_ -> this", mutates = "this")
-        public Builder arguments(Collection<String> arguments) {
+        public Builder arguments(List<String> arguments) {
             this.arguments = arguments;
             return this;
         }
 
         @Contract(value = "_ -> this", mutates = "this")
-        public Builder args(Object... arguments) {
-            return args(Arrays.asList(arguments));
-        }
-
-        @Contract(value = "_ -> this", mutates = "this")
-        public Builder args(Collection<Object> arguments) {
-            return arguments(arguments.stream().map(Formatting::asCode).toList());
-        }
-
-        @Contract(value = "_ -> this", mutates = "this")
-        public Builder rename(Function<String, String> nameTransformer) {
+        public Builder rename(UnaryOperator<String> nameTransformer) {
             this.nameTransformer = nameTransformer;
             return this;
         }

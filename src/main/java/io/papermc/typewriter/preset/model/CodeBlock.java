@@ -2,13 +2,11 @@ package io.papermc.typewriter.preset.model;
 
 import io.papermc.typewriter.IndentUnit;
 import io.papermc.typewriter.parser.StringReader;
-import io.papermc.typewriter.utils.Formatting;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.jetbrains.annotations.Contract;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.regex.Pattern;
@@ -42,7 +40,7 @@ public class CodeBlock implements CodeEmitter {
 
     @Contract(value = "_ -> new", pure = true)
     public static CodeBlock format(String... lines) {
-        List<String> newlines = new ArrayList<>(lines.length);
+        ArrayList<String> newlines = new ArrayList<>(lines.length);
         int level = 0;
         @Nullable IndentTokens indentTokens = new IndentTokens();
         for (final String line : lines) {
@@ -61,6 +59,10 @@ public class CodeBlock implements CodeEmitter {
                 }
             }
 
+            if (level < 0) {
+                throw new IllegalStateException("Cannot remove one level of indentation further. This might happens if you have more '$<' than '$>' for a given line.");
+            }
+
             final String newline;
             if (reader.getCursor() == 0) {
                 newline = line;
@@ -75,6 +77,7 @@ public class CodeBlock implements CodeEmitter {
             indentTokens.setLevel(newlines.size() - 1, level);
         }
 
+        newlines.trimToSize();
         if (indentTokens.isEmpty()) {
             indentTokens = null;
         }
@@ -87,23 +90,12 @@ public class CodeBlock implements CodeEmitter {
         return new CodeBlock(Arrays.asList(lines));
     }
 
-    @Contract(value = "_, _ -> new", pure = true)
-    public static CodeBlock returns(Enum<?> enumValue, boolean exprent) {
-        String keyword = exprent ? "yield" : "return";
-        return new CodeBlock(Collections.singletonList(keyword + " " + Formatting.asCode(enumValue) + ";"));
-    }
-
-    @Contract(value = "_ -> new", pure = true)
-    public static CodeBlock returns(Enum<?> enumValue) {
-        return returns(enumValue, false);
-    }
-
     public List<String> lines() {
         return this.lines;
     }
 
-    // strip blank lines
-    public List<String> codeLines() {
+    // ignore blank lines
+    public List<String> fullLines() {
         return this.lines.stream().filter(line -> !line.trim().isEmpty()).toList();
     }
 
@@ -125,11 +117,11 @@ public class CodeBlock implements CodeEmitter {
     }
 
     @Override
-    public boolean equals(@Nullable Object o) {
+    public boolean equals(Object o) {
         if (o == this) return true;
         if (o == null || o.getClass() != this.getClass()) return false;
         CodeBlock other = (CodeBlock) o;
-        return Objects.equals(this.lines, other.lines());
+        return this.lines.equals(other.lines());
     }
 
     @Override

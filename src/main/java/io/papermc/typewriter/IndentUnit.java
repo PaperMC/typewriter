@@ -6,6 +6,8 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.framework.qual.DefaultQualifier;
 import org.jetbrains.annotations.Contract;
 
+import java.util.Objects;
+
 @DefaultQualifier(NonNull.class)
 public record IndentUnit(String content, int size, char character) implements CharSequence {
 
@@ -50,7 +52,7 @@ public record IndentUnit(String content, int size, char character) implements Ch
 
     @Override
     public char charAt(int index) {
-        Preconditions.checkElementIndex(index, this.size);
+        Objects.checkIndex(index, this.size);
         return this.character; // mixed character are not allowed
     }
 

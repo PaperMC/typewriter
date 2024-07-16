@@ -47,13 +47,13 @@ public abstract class EnumRewriter<T> extends SearchReplaceRewriter {
     }
 
     private boolean canReachEnd(SearchMetadata metadata) {
-        // the default behavior might fail for simple enum or with trailing comments that's why a settings exists
+        // the default behavior might fail for simple enum or with trailing comments that's why a setting exists
         return Objects.requireNonNullElseGet(this.reachEnd, () -> metadata.replacedContent().stripTrailing().endsWith(";"));
     }
 
     @Override
     protected void replaceLine(SearchMetadata metadata, StringBuilder builder) {
-        Preconditions.checkArgument(this.values.hasNext(), "Enum size doesn't match between generated values and replaced values.");
+        Preconditions.checkState(this.values.hasNext(), "Enum size doesn't match between generated values and replaced values.");
         appendEnumValue(this.values.next(), builder, metadata, this.canReachEnd(metadata));
     }
 

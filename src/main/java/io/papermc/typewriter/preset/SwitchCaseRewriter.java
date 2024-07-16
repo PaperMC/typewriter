@@ -1,5 +1,6 @@
 package io.papermc.typewriter.preset;
 
+import com.google.common.base.Preconditions;
 import io.papermc.typewriter.SourceFile;
 import io.papermc.typewriter.replace.SearchMetadata;
 import io.papermc.typewriter.replace.SearchReplaceRewriter;
@@ -29,6 +30,7 @@ public abstract class SwitchCaseRewriter extends SearchReplaceRewriter {
 
     @Override
     protected void replaceLine(SearchMetadata metadata, StringBuilder builder) {
+        Preconditions.checkState(this.cases.hasNext(), "Switch case size doesn't match between generated values and replaced values.");
         appendCase(builder, metadata);
     }
 

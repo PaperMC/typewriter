@@ -22,7 +22,7 @@ public record ClassNamed(String packageName, String simpleName, String dottedNes
         Preconditions.checkArgument(SourceVersion.isName(dottedNestedName), "Class name contains syntax errors");
         if (knownClass != null) {
             Preconditions.checkArgument(!knownClass.isPrimitive(), "Invalid class, primitive types and 'void' type are not allowed");
-            Preconditions.checkArgument(!knownClass.isAnonymousClass() && !knownClass.isSynthetic() && !knownClass.isArray(), "Invalid class, only single named class are allowed");
+            Preconditions.checkArgument(!knownClass.isAnonymousClass() && !knownClass.isHidden() && !knownClass.isSynthetic() && !knownClass.isArray(), "Invalid class, only single named class are allowed");
         }
     }
 

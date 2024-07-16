@@ -6,8 +6,8 @@ import java.util.TreeMap;
 
 public class IndentTokens {
 
-    private int level;
     private final NavigableMap<Integer, Integer> tokens = new TreeMap<>();
+    private int level;
 
     public void setLevel(int line, int level) {
         if (this.level != level) {

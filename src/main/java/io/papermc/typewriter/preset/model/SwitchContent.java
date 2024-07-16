@@ -18,8 +18,6 @@ public class SwitchContent implements CodeEmitter {
 
     private List<SwitchCases> cases = new ArrayList<>();
     private @Nullable SwitchCases defaultCase;
-    @Deprecated
-    private @Nullable Comparator<CodeBlock> sortCases;
 
     private SwitchContent(Collection<SwitchCases> branches) {
         this.then(branches);
@@ -57,13 +55,6 @@ public class SwitchContent implements CodeEmitter {
     @Contract(value = "_ -> this", mutates = "this")
     public SwitchContent withDefault(CodeBlock content) {
         return withDefault(SwitchCases.ofDefault(content, false));
-    }
-
-    @Deprecated
-    @Contract(value = "_ -> this", mutates = "this")
-    public SwitchContent sort(Comparator<CodeBlock> contentSort) {
-        this.sortCases = contentSort;
-        return this;
     }
 
     public void mergeSimilarBranches(Comparator<String> keySort) {
@@ -120,10 +111,6 @@ public class SwitchContent implements CodeEmitter {
 
     @Override
     public void emitCode(String indent, IndentUnit indentUnit, StringBuilder builder) {
-        if (this.sortCases != null) {
-            this.cases.sort(Comparator.comparing(SwitchCases::content, this.sortCases));
-        }
-
         for (SwitchCases cases : this.cases) {
             cases.emitCode(indent, indentUnit, builder);
         }
