@@ -32,6 +32,42 @@ public class CodeBlock implements CodeEmitter {
         return of(LINE_BREAK_PATTERN.split(content, -1));
     }
 
+    @Contract(value = "_, _ -> new", pure = true)
+    public static CodeBlock from(IndentUnit indentUnit, String content) {
+        return from(indentUnit, LINE_BREAK_PATTERN.split(content, -1));
+    }
+
+    @Contract(value = "_, _ -> new", pure = true)
+    public static CodeBlock from(IndentUnit indentUnit, String... lines) {
+        List<String> newlines = new ArrayList<>(lines.length);
+        @Nullable IndentTokens indentTokens = new IndentTokens();
+        for (int i = 0; i < lines.length; i++) {
+            String line = lines[i];
+            StringReader reader = new StringReader(line);
+
+            int level = 0;
+            while (reader.trySkipChars(indentUnit.size(), indentUnit.character())) {
+                level++;
+            }
+
+            final String newline;
+            if (reader.getCursor() == 0) {
+                newline = line;
+            } else {
+                newline = reader.getRemaining();
+            }
+
+            newlines.add(newline);
+            indentTokens.setLevel(i, level);
+        }
+
+        if (indentTokens.isEmpty()) {
+            indentTokens = null;
+        }
+
+        return new CodeBlock(newlines, indentTokens);
+    }
+
     // support $> $< to indent the code using provided indent unit
     @Contract(value = "_ -> new", pure = true)
     public static CodeBlock format(String content) {
