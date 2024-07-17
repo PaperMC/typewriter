@@ -1,5 +1,7 @@
 package io.papermc.typewriter.replace;
 
+import com.google.common.base.Preconditions;
+import io.papermc.typewriter.ClassNamed;
 import io.papermc.typewriter.SourceFile;
 import io.papermc.typewriter.context.ImportCollector;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
@@ -70,8 +72,12 @@ public class SearchReplaceRewriter extends SearchReplaceRewriterBase {
             return false;
         }
 
+        this.options.targetClass().ifPresent(targetClass -> {
+            Preconditions.checkArgument(targetClass.root().equals(file.mainClass()), "Target class must be a nested class of " + file.mainClass().canonicalName());
+        });
+
         if (this.name == null) {
-            this.name = file.mainClass().simpleName();
+            this.name = this.options.targetClass().orElse(file.mainClass()).simpleName();
         }
         return true;
     }

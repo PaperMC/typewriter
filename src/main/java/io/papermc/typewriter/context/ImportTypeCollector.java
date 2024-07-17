@@ -1,5 +1,6 @@
 package io.papermc.typewriter.context;
 
+import com.google.common.base.Preconditions;
 import io.papermc.typewriter.ClassNamed;
 import org.jetbrains.annotations.VisibleForTesting;
 
@@ -22,10 +23,18 @@ public class ImportTypeCollector implements ImportCollector {
     private final Map<String, String> staticImports = new HashMap<>(); // <fqn.id:id>
     private final Set<String> globalStaticImports = new HashSet<>();
 
-    private final ClassNamed rewriteClass;
+    private final ClassNamed mainClass;
+    private ClassNamed accessSource;
 
-    public ImportTypeCollector(ClassNamed rewriteClass) {
-        this.rewriteClass = rewriteClass;
+    public ImportTypeCollector(ClassNamed mainClass) {
+        this.mainClass = mainClass;
+        this.accessSource = mainClass;
+    }
+
+    @Override
+    public void setAccessSource(ClassNamed accessSource) {
+        Preconditions.checkArgument(accessSource == null || accessSource.root().equals(this.mainClass), "Access source must be a nested class of " + this.mainClass.canonicalName());
+        this.accessSource = accessSource == null ? this.mainClass : accessSource;
     }
 
     @Override
@@ -105,11 +114,11 @@ public class ImportTypeCollector implements ImportCollector {
                 }
 
                 // self classes (with inner classes)
-                if (this.rewriteClass.root().equals(key.root())) {
-                    return getInnerShortName(this.rewriteClass, key);
+                if (this.mainClass.equals(key.root())) {
+                    return getInnerShortName(this.accessSource, key);
                 }
 
-                if (key.packageName().equals(this.rewriteClass.packageName())) { // same package don't need fqn too
+                if (key.packageName().equals(this.mainClass.packageName())) { // same package don't need fqn too
                     return key.dottedNestedName();
                 }
                 return key.canonicalName();

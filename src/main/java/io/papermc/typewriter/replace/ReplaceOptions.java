@@ -1,6 +1,7 @@
 package io.papermc.typewriter.replace;
 
 import com.google.common.base.Preconditions;
+import io.papermc.typewriter.ClassNamed;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.framework.qual.DefaultQualifier;
@@ -14,7 +15,8 @@ public record ReplaceOptions(
     String endCommentMarker,
     Optional<String> generatedComment,
     boolean exactReplacement,
-    boolean multipleOperation
+    boolean multipleOperation,
+    Optional<ClassNamed> targetClass
 ) implements ReplaceOptionsLike {
 
     public ReplaceOptions {
@@ -60,6 +62,7 @@ public record ReplaceOptions(
         private @Nullable String generatedComment;
         private boolean exactReplacement;
         private boolean multipleOperation;
+        private @Nullable ClassNamed targetClass;
 
         public Builder(String startCommentMarker, String endCommentMarker) {
             Preconditions.checkArgument(!startCommentMarker.isBlank(), "Start comment marker cannot be blank!");
@@ -117,6 +120,24 @@ public record ReplaceOptions(
             return this;
         }
 
+        /**
+         * Provides the nested class targeted (if any) as extra context.
+         * This is mainly used in the import collector to get
+         * more accurate result when getting a shortened name.
+         * In case your rewriter is more complex and overwrite
+         * lines across different nested classes, you might be
+         * interested of using {@link io.papermc.typewriter.context.ImportCollector#setAccessSource(ClassNamed)}
+         * directly.
+         *
+         * @param nestedClass the nested class
+         * @return the builder, for chaining
+         */
+        @Contract(value = "_ -> this", mutates = "this")
+        public Builder targetClass(ClassNamed nestedClass) {
+            this.targetClass = nestedClass;
+            return this;
+        }
+
         @Override
         public ReplaceOptions asOptions() {
             return new ReplaceOptions(
@@ -124,7 +145,8 @@ public record ReplaceOptions(
                 this.endCommentMarker,
                 Optional.ofNullable(this.generatedComment),
                 this.exactReplacement,
-                this.multipleOperation
+                this.multipleOperation,
+                Optional.ofNullable(this.targetClass)
             );
         }
     }

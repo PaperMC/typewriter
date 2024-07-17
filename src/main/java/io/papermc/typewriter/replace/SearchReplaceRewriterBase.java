@@ -81,7 +81,7 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
         Set<SearchReplaceRewriter> unusedRewriters = new HashSet<>(rewriters);
         @Nullable StringBuilder strippedContent = null;
 
-        final ImportCollector importCollector = new ImportTypeCollector(source.mainClass()); // todo should be the rewritten class instead
+        final ImportCollector importCollector = new ImportTypeCollector(source.mainClass());
         final LineParser lineParser = new LineParser();
 
         @Nullable String indent = null;
@@ -134,6 +134,7 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
                             content.append('\n');
                         }
 
+                        foundRewriter.options.targetClass().ifPresentOrElse(importCollector::setAccessSource, () -> importCollector.setAccessSource(null));
                         foundRewriter.insert(new SearchMetadata(source, importCollector, indent, strippedContent.toString(), i), content);
                         strippedContent = null;
                     }
@@ -160,6 +161,7 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
                 if (foundRewriter.options.exactReplacement()) {
                     // there's no generated comment here since when the size is equals the replaced content doesn't depend on the game content
                     // if it does that means the replaced content might not be equals during MC update because of adding/removed content
+                    foundRewriter.options.targetClass().ifPresentOrElse(importCollector::setAccessSource, () -> importCollector.setAccessSource(null));
                     foundRewriter.replaceLine(new SearchMetadata(source, importCollector, indent, line, i), content);
                 } else {
                     usedBuilder = strippedContent;
