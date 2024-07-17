@@ -18,7 +18,7 @@ public record ClassNamed(String packageName, String simpleName, String dottedNes
     }
 
     public ClassNamed {
-        Preconditions.checkArgument(SourceVersion.isName(packageName), "Package name contains syntax errors");
+        Preconditions.checkArgument(packageName.isEmpty() || SourceVersion.isName(packageName), "Package name contains syntax errors");
         Preconditions.checkArgument(SourceVersion.isName(dottedNestedName), "Class name contains syntax errors");
         if (knownClass != null) {
             Preconditions.checkArgument(!knownClass.isPrimitive(), "Invalid class, primitive types and 'void' type are not allowed");
@@ -29,7 +29,7 @@ public record ClassNamed(String packageName, String simpleName, String dottedNes
     /**
      * Creates a class named object.
      *
-     * @param packageName the package name
+     * @param packageName the package name or an empty string for the default package
      * @param name        the class name
      * @return the new object
      * @apiNote nested classes are delimited by '$' character and
@@ -54,7 +54,7 @@ public record ClassNamed(String packageName, String simpleName, String dottedNes
     /**
      * Creates a class named object.
      *
-     * @param packageName the package name
+     * @param packageName the package name or an empty string for the default package
      * @param name        the root class name
      * @param nestedNames the nested class names
      * @return the new object
@@ -122,6 +122,10 @@ public record ClassNamed(String packageName, String simpleName, String dottedNes
     public String canonicalName() {
         if (this.knownClass != null) {
             return this.knownClass.getCanonicalName();
+        }
+
+        if (this.packageName.isEmpty()) {
+            return this.dottedNestedName;
         }
 
         return this.packageName + '.' + this.dottedNestedName;

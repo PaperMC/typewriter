@@ -17,7 +17,11 @@ public final class ClassHelper {
 
     public static String retrieveFullNestedName(Class<?> clazz) {
         String fqn = clazz.getCanonicalName();
-        return fqn.substring(clazz.getPackageName().length() + 1);
+        String packageName = clazz.getPackageName();
+        if (packageName.isEmpty()) {
+            return fqn;
+        }
+        return fqn.substring(packageName.length() + 1);
     }
 
     private ClassHelper() {
