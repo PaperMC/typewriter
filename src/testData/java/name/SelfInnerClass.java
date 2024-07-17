@@ -8,8 +8,32 @@ public class SelfInnerClass {
                     var a = A.class;
                     var b = B.class;
                     var c = C.class;
+                    var d = D.class;
                 }
             }
+
+            public class E {
+                {
+                    var a = A.class;
+                    var b = B.class;
+                    var c = C.class;
+                    var d = D.class;
+                    var f = D.F.class;
+                }
+            }
+        }
+    }
+
+    public class D {
+        {
+            var a = A.class;
+            var b = A.B.class;
+            var c = A.B.C.class;
+            var d = D.class;
+        }
+
+        public class F {
+
         }
     }
 
@@ -17,5 +41,6 @@ public class SelfInnerClass {
         var a = A.class;
         var b = A.B.class;
         var c = A.B.C.class;
+        var d = D.class;
     }
 }

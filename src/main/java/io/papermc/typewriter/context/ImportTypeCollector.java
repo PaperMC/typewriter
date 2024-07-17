@@ -118,13 +118,43 @@ public class ImportTypeCollector implements ImportCollector {
     }
 
     private String getInnerShortName(ClassNamed fromType, ClassNamed targetType) {
-        int fromLen = fromType.dottedNestedName().length();
-        int targetLen = targetType.dottedNestedName().length();
-        if (targetLen > fromLen) {
-            return targetType.dottedNestedName().substring(fromLen + 1); // reference sibling class
-        } else {
-            return targetType.simpleName(); // reference enclosing class or self
+        if (fromType.dottedNestedName().equals(targetType.dottedNestedName()) || fromType.dottedNestedName().startsWith(targetType.dottedNestedName() + ".")) {
+            return targetType.simpleName(); // reference self or enclosing class
         }
+
+        Set<ClassNamed> visitedTypes = new HashSet<>();
+        ClassNamed intersectType = null;
+        ClassNamed type = targetType;
+
+        while (!type.isRoot()) {
+            if (type.dottedNestedName().equals(fromType.dottedNestedName())) {
+                intersectType = type;
+                break;
+            }
+            type = type.enclosing();
+            visitedTypes.add(type);
+        }
+
+        if (intersectType == null && visitedTypes.contains(fromType)) {
+            intersectType = fromType;
+        }
+
+        if (intersectType == null) {
+            type = fromType;
+            while (!type.isRoot()) {
+                type = type.enclosing();
+                if (visitedTypes.contains(type)) {
+                    intersectType = type;
+                    break;
+                }
+            }
+        }
+
+        if (intersectType == null) { // shouldn't happen (same root)
+            return targetType.dottedNestedName();
+        }
+
+        return targetType.dottedNestedName().substring(intersectType.dottedNestedName().length() + 1); // reference sibling class
     }
 
     @VisibleForTesting

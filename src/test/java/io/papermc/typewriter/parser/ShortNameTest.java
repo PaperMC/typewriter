@@ -50,7 +50,9 @@ public class ShortNameTest extends ParserTest {
             rootClass(RemoteStaticGlobalInnerClassImportType.class),
             rootClass(RemoteInnerClassImportType.class),
             rootClass(SelfInnerClass.class),
-            innerClass(SelfInnerClass.class, SelfInnerClass.A.B.C.class)
+            innerClass(SelfInnerClass.class, SelfInnerClass.A.B.C.class),
+            innerClass(SelfInnerClass.class, SelfInnerClass.D.class),
+            innerClass(SelfInnerClass.class, SelfInnerClass.A.B.E.class)
         );
     }
 
