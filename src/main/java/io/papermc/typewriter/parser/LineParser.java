@@ -196,7 +196,7 @@ public class LineParser {
 
             // not commented
             char c = line.peek();
-            if (AnnotationSkipSteps.canStart(c)) { // handle annotation with param to avoid open curly bracket that occur in array argument
+            if (AnnotationSkipSteps.canStart(line)) { // handle annotation with param to avoid open curly bracket that occur in array argument
                 this.stepManager.enqueue(new AnnotationSkipSteps());
                 continue;
             } else if (c == '{') {

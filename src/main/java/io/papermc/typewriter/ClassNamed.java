@@ -94,11 +94,11 @@ public record ClassNamed(String packageName, String simpleName, String dottedNes
         return this.root() == this;
     }
 
-    public ClassNamed enclosing() {
+    public @Nullable ClassNamed enclosing() {
         if (this.knownClass != null) {
             Class<?> parentClass = this.knownClass.getEnclosingClass();
             if (parentClass == null) {
-                return this;
+                return null;
             }
             return new ClassNamed(parentClass);
         }
@@ -116,7 +116,7 @@ public record ClassNamed(String packageName, String simpleName, String dottedNes
             }
             return new ClassNamed(this.packageName, simpleName, name, null);
         }
-        return this;
+        return null;
     }
 
     public String canonicalName() {
@@ -133,9 +133,6 @@ public record ClassNamed(String packageName, String simpleName, String dottedNes
 
     @Override
     public int hashCode() {
-        if (this.knownClass != null) {
-            return this.knownClass.hashCode();
-        }
         return Objects.hash(this.packageName, this.dottedNestedName);
     }
 

@@ -12,26 +12,26 @@ import io.papermc.typewriter.parser.step.StepHolder;
 import io.papermc.typewriter.utils.Formatting;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
-import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 
 // start once "@" is detected unless commented
-// order is: skipAtSign -> skipPartName -> checkAnnotationName -> checkOpenParenthesis (-> skipParentheses)
+// order is: skipPartName -> checkAnnotationName -> checkOpenParenthesis (-> skipParentheses)
 public final class AnnotationSkipSteps implements StepHolder {
 
-    public static boolean canStart(char currentChar) {
-        return currentChar == '@';
+    public static boolean canStart(StringReader line) {
+        if (line.peek() == '@') {
+            line.skip();
+            return true;
+        }
+        return false;
     }
 
     private final IterativeStep skipParenthesesStep = this.repeatStep(this::skipParentheses);
 
     private @MonotonicNonNull ProtoTypeName name;
     private Closure parenthesisClosure;
-
-    public void skipAtSign(StringReader line, LineParser parser) {
-        line.skip(); // skip @
-    }
 
     public boolean skipPartName(StringReader line, LineParser parser) {
         boolean checkStartId = this.name == null || this.name.shouldCheckStartIdentifier();
@@ -58,12 +58,12 @@ public final class AnnotationSkipSteps implements StepHolder {
 
     private static final List<ClosureType> IGNORE_NESTED_CLOSURES;
     static {
-        Set<ClosureType> types = new HashSet<>(ClosureType.LEAFS.size());
+        List<ClosureType> types = new ArrayList<>(ClosureType.LEAFS.size());
         types.addAll(ClosureType.LEAFS);
         types.remove(ClosureType.COMMENT); // comment will be skipped separately to simplify the iteration
         types.add(ClosureType.PARENTHESIS); // skip nested annotation too
 
-        IGNORE_NESTED_CLOSURES = ClosureType.prioritySort(types);
+        IGNORE_NESTED_CLOSURES = Collections.unmodifiableList(types);
     }
 
     public boolean skipParentheses(StringReader line, LineParser parser) {
@@ -121,7 +121,7 @@ public final class AnnotationSkipSteps implements StepHolder {
 
         if (parser.tryAdvanceStartClosure(ClosureType.PARENTHESIS, line)) { // open parenthesis?
             this.parenthesisClosure = parser.getNearestClosure();
-            parser.getSteps().addPriority(this.skipParenthesesStep);
+            parser.getSteps().executeNext(this.skipParenthesesStep);
         }
         return false;
     }
@@ -129,7 +129,6 @@ public final class AnnotationSkipSteps implements StepHolder {
     @Override
     public IterativeStep[] initialSteps() {
         return new IterativeStep[] {
-            this.onceStep(this::skipAtSign),
             this.repeatStep(this::skipPartName),
             this.onceStep(this::checkAnnotationName),
             this.repeatStep(this::checkOpenParenthesis),

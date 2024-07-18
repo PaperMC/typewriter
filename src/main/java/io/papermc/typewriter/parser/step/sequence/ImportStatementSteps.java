@@ -59,7 +59,7 @@ public final class ImportStatementSteps implements StepHolder {
         }
 
         if (line.trySkipString("static")) {
-            parser.getSteps().addPriority(this.enforceSpaceStep);
+            parser.getSteps().executeNext(this.enforceSpaceStep);
             this.isStatic = true;
         }
         return false;
@@ -119,7 +119,7 @@ public final class ImportStatementSteps implements StepHolder {
                 }
 
                 line.skip();
-                parser.getSteps().addPriority(this.skipUntilSemicolonAfterStarStep);
+                parser.getSteps().executeNext(this.skipUntilSemicolonAfterStarStep);
                 return false;
             } else if (parser.peekSingleLineComment(line)) {
                 // ignore single line comment at the end of the name

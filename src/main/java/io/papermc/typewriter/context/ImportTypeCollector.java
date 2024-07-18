@@ -76,15 +76,26 @@ public class ImportTypeCollector implements ImportCollector {
 
     private Optional<String> getShortName0(ClassNamed type, Set<String> imports, Set<String> globalImports, boolean unusualStaticImport) {
         ClassNamed foundClass = type;
-        while (!imports.contains(foundClass.canonicalName()) &&
-            !globalImports.contains(foundClass.enclosing().canonicalName())) {
-            if (foundClass.isRoot() ||
-                (unusualStaticImport && !Modifier.isStatic(foundClass.knownClass().getModifiers())) // static imports are allowed for regular class too but only when the inner classes are all static
-            ) {
-                foundClass = null;
+        ClassNamed upperClass = type.enclosing();
+        while (true) {
+            if (foundClass == null) {
                 break;
             }
-            foundClass = foundClass.enclosing();
+
+            if (unusualStaticImport && !Modifier.isStatic(foundClass.knownClass().getModifiers())) {
+                // static imports are allowed for regular class too but only when the inner classes are all static
+                return Optional.empty();
+            }
+
+            if (imports.contains(foundClass.canonicalName()) ||
+                (upperClass != null && globalImports.contains(upperClass.canonicalName()))) {
+                break;
+            }
+
+            foundClass = upperClass;
+            if (upperClass != null) {
+                upperClass = upperClass.enclosing();
+            }
         }
 
         if (foundClass != null) {
@@ -107,18 +118,21 @@ public class ImportTypeCollector implements ImportCollector {
                 shortName = getShortName0(key, this.staticImports.keySet(), this.globalStaticImports, true);
             }
 
+            // self classes (with inner classes)
+            if (this.mainClass.equals(key.root())) {
+                int importedSize = shortName.map(String::length).orElse(0);
+                String innerName = getInnerShortName(this.accessSource, key);
+                if (importedSize == 0 || innerName.length() < importedSize) {
+                    // inner name might be shorter than self import
+                    return innerName;
+                }
+            }
+
             return shortName.orElseGet(() -> {
                 // import have priority over those implicit things
-                if (key.packageName().equals(JAVA_LANG_PACKAGE)) { // auto-import
-                    return key.dottedNestedName();
-                }
-
-                // self classes (with inner classes)
-                if (this.mainClass.equals(key.root())) {
-                    return getInnerShortName(this.accessSource, key);
-                }
-
-                if (key.packageName().equals(this.mainClass.packageName())) { // same package don't need fqn too
+                if (key.packageName().equals(JAVA_LANG_PACKAGE) || // auto-import
+                    key.packageName().equals(this.mainClass.packageName()) // same package don't need fqn too
+                ) {
                     return key.dottedNestedName();
                 }
                 return key.canonicalName();
@@ -135,27 +149,23 @@ public class ImportTypeCollector implements ImportCollector {
         ClassNamed intersectType = null;
         ClassNamed type = targetType;
 
-        while (!type.isRoot()) {
+        while (type != null) {
             if (type.dottedNestedName().equals(fromType.dottedNestedName())) {
                 intersectType = type;
                 break;
             }
-            type = type.enclosing();
             visitedTypes.add(type);
-        }
-
-        if (intersectType == null && visitedTypes.contains(fromType)) {
-            intersectType = fromType;
+            type = type.enclosing();
         }
 
         if (intersectType == null) {
             type = fromType;
-            while (!type.isRoot()) {
-                type = type.enclosing();
+            while (type != null) {
                 if (visitedTypes.contains(type)) {
                     intersectType = type;
                     break;
                 }
+                type = type.enclosing();
             }
         }
 

@@ -24,7 +24,7 @@ public class StepManager {
         }
     }
 
-    public void addPriority(IterativeStep step) {
+    public void executeNext(IterativeStep step) {
         if (!this.steps.offerFirst(step)) {
             throw new IllegalStateException("Cannot add a priority step into the queue!");
         }

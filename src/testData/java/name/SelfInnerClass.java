@@ -1,5 +1,7 @@
 package name;
 
+import name.SelfInnerClass.D;
+
 public class SelfInnerClass {
     public class A {
         public class B {
@@ -30,6 +32,7 @@ public class SelfInnerClass {
             var b = A.B.class;
             var c = A.B.C.class;
             var d = D.class;
+            var f = F.class;
         }
 
         public class F {
@@ -42,5 +45,6 @@ public class SelfInnerClass {
         var b = A.B.class;
         var c = A.B.C.class;
         var d = D.class;
+        var f = D.F.class;
     }
 }
