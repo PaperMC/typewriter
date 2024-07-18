@@ -24,10 +24,10 @@ dependencies {
     implementation("org.apache.logging.log4j:log4j-core:2.23.1")
     implementation("org.slf4j:slf4j-api:2.0.13")
 
-    compileOnly("org.checkerframework:checker-qual:3.44.0")
+    compileOnly("org.checkerframework:checker-qual:3.45.0")
     compileOnly("org.jetbrains:annotations:24.1.0")
 
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.3")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     testImplementation("org.yaml:snakeyaml:2.2")
     testImplementation(testData.output)
