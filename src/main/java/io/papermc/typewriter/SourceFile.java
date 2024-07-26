@@ -12,7 +12,7 @@ import java.util.Iterator;
 public record SourceFile(ClassNamed mainClass, Path path, IndentUnit indentUnit) {
 
     public SourceFile {
-        Preconditions.checkArgument(mainClass.isRoot(), "Main class is not a root class!");
+        Preconditions.checkArgument(mainClass.isTopLevel(), "Main class is not a top level class!");
         Preconditions.checkArgument(path.getNameCount() > 0, "Path %s cannot be a root element", path);
         Preconditions.checkArgument(path.getFileName().toString().endsWith(".java"), "Path %s is not a Java source file", path);
         Preconditions.checkArgument(!path.isAbsolute(), "Path %s cannot be absolute", path);

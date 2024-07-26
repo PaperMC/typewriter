@@ -55,7 +55,7 @@ public record ClassNamed(String packageName, String simpleName, String dottedNes
      * Creates a class named object.
      *
      * @param packageName the package name or an empty string for the default package
-     * @param name        the root class name
+     * @param name        the top level class name
      * @param nestedNames the nested class names
      * @return the new object
      */
@@ -73,13 +73,13 @@ public record ClassNamed(String packageName, String simpleName, String dottedNes
         return new ClassNamed(packageName, simpleName, nestedName, null);
     }
 
-    public ClassNamed root() {
+    public ClassNamed topLevel() {
         if (this.knownClass != null) {
-            Class<?> rootClass = ClassHelper.getRootClass(this.knownClass);
-            if (rootClass == this.knownClass) {
+            Class<?> topLevelClass = ClassHelper.getTopLevelClass(this.knownClass);
+            if (topLevelClass == this.knownClass) {
                 return this;
             }
-            return new ClassNamed(rootClass);
+            return new ClassNamed(topLevelClass);
         }
 
         int dotIndex = this.dottedNestedName.indexOf('.');
@@ -90,8 +90,8 @@ public record ClassNamed(String packageName, String simpleName, String dottedNes
         return this;
     }
 
-    public boolean isRoot() {
-        return this.root() == this;
+    public boolean isTopLevel() {
+        return this.dottedNestedName.equals(this.simpleName);
     }
 
     public @Nullable ClassNamed enclosing() {
@@ -112,7 +112,7 @@ public record ClassNamed(String packageName, String simpleName, String dottedNes
             if (lastDotIndex != -1) {
                 simpleName = name.substring(lastDotIndex + 1);
             } else {
-                simpleName = name; // root
+                simpleName = name; // top level
             }
             return new ClassNamed(this.packageName, simpleName, name, null);
         }

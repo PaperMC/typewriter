@@ -2,6 +2,7 @@ package io.papermc.typewriter.context;
 
 import com.google.common.base.Preconditions;
 import io.papermc.typewriter.ClassNamed;
+import io.papermc.typewriter.parser.ProtoTypeName;
 import org.jetbrains.annotations.VisibleForTesting;
 
 import java.lang.reflect.Modifier;
@@ -33,7 +34,7 @@ public class ImportTypeCollector implements ImportCollector {
 
     @Override
     public void setAccessSource(ClassNamed accessSource) {
-        Preconditions.checkArgument(accessSource == null || accessSource.root().equals(this.mainClass), "Access source must be a nested class of " + this.mainClass.canonicalName());
+        Preconditions.checkArgument(accessSource == null || accessSource.topLevel().equals(this.mainClass), "Access source must be a nested class of " + this.mainClass.canonicalName());
         this.accessSource = accessSource == null ? this.mainClass : accessSource;
     }
 
@@ -77,11 +78,7 @@ public class ImportTypeCollector implements ImportCollector {
     private Optional<String> getShortName0(ClassNamed type, Set<String> imports, Set<String> globalImports, boolean unusualStaticImport) {
         ClassNamed foundClass = type;
         ClassNamed upperClass = type.enclosing();
-        while (true) {
-            if (foundClass == null) {
-                break;
-            }
-
+        while (foundClass != null) {
             if (unusualStaticImport && !Modifier.isStatic(foundClass.knownClass().getModifiers())) {
                 // static imports are allowed for regular class too but only when the inner classes are all static
                 return Optional.empty();
@@ -119,7 +116,7 @@ public class ImportTypeCollector implements ImportCollector {
             }
 
             // self classes (with inner classes)
-            if (this.mainClass.equals(key.root())) {
+            if (this.mainClass.equals(key.topLevel())) {
                 int importedSize = shortName.map(String::length).orElse(0);
                 String innerName = getInnerShortName(this.accessSource, key);
                 if (importedSize == 0 || innerName.length() < importedSize) {
@@ -140,40 +137,23 @@ public class ImportTypeCollector implements ImportCollector {
         });
     }
 
-    private String getInnerShortName(ClassNamed fromType, ClassNamed targetType) {
-        if (fromType.dottedNestedName().equals(targetType.dottedNestedName()) || fromType.dottedNestedName().startsWith(targetType.dottedNestedName() + ".")) {
-            return targetType.simpleName(); // reference self or enclosing class
-        }
+    public String getInnerShortName(ClassNamed fromType, ClassNamed targetType) {
+        int targetSize = targetType.dottedNestedName().length();
+        int fromSize = fromType.dottedNestedName().length();
 
-        Set<ClassNamed> visitedTypes = new HashSet<>();
-        ClassNamed intersectType = null;
-        ClassNamed type = targetType;
-
-        while (type != null) {
-            if (type.dottedNestedName().equals(fromType.dottedNestedName())) {
-                intersectType = type;
+        int maxOffset = Math.min(fromSize, targetSize - 1);
+        int startOffset;
+        for (startOffset = 0; startOffset < maxOffset; startOffset++) {
+            if (fromType.dottedNestedName().charAt(startOffset) != targetType.dottedNestedName().charAt(startOffset)) {
                 break;
             }
-            visitedTypes.add(type);
-            type = type.enclosing();
         }
 
-        if (intersectType == null) {
-            type = fromType;
-            while (type != null) {
-                if (visitedTypes.contains(type)) {
-                    intersectType = type;
-                    break;
-                }
-                type = type.enclosing();
-            }
+        if (targetSize > fromSize && targetType.dottedNestedName().charAt(startOffset) == ProtoTypeName.IDENTIFIER_SEPARATOR) {
+            startOffset++;
         }
 
-        if (intersectType == null) { // shouldn't happen (same root)
-            return targetType.dottedNestedName();
-        }
-
-        return targetType.dottedNestedName().substring(intersectType.dottedNestedName().length() + 1); // reference sibling class
+        return targetType.dottedNestedName().substring(startOffset);
     }
 
     @VisibleForTesting

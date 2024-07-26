@@ -63,7 +63,7 @@ public class ShortNameTest extends ParserTest {
                              String name,
                              @ConvertWith(ImportShortNameMappingConverter.class) ImportShortNameMapping mapping) throws IOException {
         ClassNamed accessSource = new ClassNamed(sampleClass);
-        final ImportTypeCollector importCollector = new ImportTypeCollector(accessSource.root());
+        final ImportTypeCollector importCollector = new ImportTypeCollector(accessSource.topLevel());
         importCollector.setAccessSource(accessSource);
         parseFile(path, importCollector);
 

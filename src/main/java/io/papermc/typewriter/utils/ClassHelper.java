@@ -2,17 +2,17 @@ package io.papermc.typewriter.utils;
 
 public final class ClassHelper {
 
-    public static Class<?> getRootClass(Class<?> clazz) {
-        Class<?> rootClass = clazz;
+    public static Class<?> getTopLevelClass(Class<?> clazz) {
+        Class<?> topLevelClass = clazz;
         Class<?> upperClass = clazz;
         while (true) {
             upperClass = upperClass.getEnclosingClass();
             if (upperClass == null) {
                 break;
             }
-            rootClass = upperClass;
+            topLevelClass = upperClass;
         }
-        return rootClass;
+        return topLevelClass;
     }
 
     public static String retrieveFullNestedName(Class<?> clazz) {
