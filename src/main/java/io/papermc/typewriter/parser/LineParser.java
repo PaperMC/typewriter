@@ -45,6 +45,17 @@ public class LineParser {
         return false;
     }
 
+    private boolean isCurrentlyEscaped(StringReader line) {
+        int delimiterCursor = line.getCursor() - 1; // escaped sequence is only a single char
+        int cursor = 1;
+        while (delimiterCursor >= cursor && line.getString().charAt(delimiterCursor - cursor) == '\\') {
+            cursor++;
+        }
+
+        int escapedBlock = cursor - 1;
+        return (escapedBlock & 1) != 0; // odd size means the delimiter is always escaped
+    }
+
     // for all closure, leaf closure type should use the other similar method after this one if possible
     public ClosureAdvanceResult tryAdvanceEndClosure(Closure closure, StringReader line) {
         Preconditions.checkState(this.nearestClosure != null && this.nearestClosure.hasUpperClosure(closure), "Need to be in an upper closure of " + closure + " to find its end identifier");
@@ -53,15 +64,10 @@ public class LineParser {
             return ClosureAdvanceResult.IGNORED;
         }
 
-        char previousChar = '\0';
-        if (line.getCursor() >= 1) {
-            previousChar = line.peek(-1);
-        }
-
         ClosureType type = closure.getType();
         if (line.trySkipString(type.end)) { // closure has been consumed
             // skip escape closed closure
-            if (type.escapableByPreviousChar() && previousChar == '\\') {
+            if (type.escapableByPreviousChar() && this.isCurrentlyEscaped(line)) {
                 return ClosureAdvanceResult.SKIPPED;
             }
 
@@ -103,14 +109,9 @@ public class LineParser {
         Preconditions.checkArgument(ClosureType.LEAFS.contains(type), "Only leaf closure can be advanced using its type only, for other types use the closure equivalent method to take in account nested closures");
         Preconditions.checkState(this.nearestClosure != null && this.nearestClosure.getType() == type, "Need a direct upper closure of " + type);
 
-        char previousChar = '\0';
-        if (line.getCursor() >= 1) {
-            previousChar = line.peek(-1);
-        }
-
         if (line.trySkipString(type.end)) { // closure has been consumed
             // skip escape closed closure
-            if (type.escapableByPreviousChar() && previousChar == '\\') {
+            if (type.escapableByPreviousChar() && this.isCurrentlyEscaped(line)) {
                 return ClosureAdvanceResult.SKIPPED;
             }
 

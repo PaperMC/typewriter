@@ -4,7 +4,7 @@ package area;
     (
     /* ) { */  // ) {
     /* ) { */
-    strings = {"trap: )   \" )  { // /* "}, annotation = @AnnotationTrapClass.Trapped2(strings = {"trap: )   \" )  {"}, chars = {')', '{', '\''}, paragraphs = """
+    strings = {"trap: )   \" )  { // /* \\\" \\"}, annotation = @AnnotationTrapClass.Trapped2(strings = {"trap: )   \" )  {"}, chars = {')', '{', '\''}, paragraphs = """
     )
     \"\"\"
     {
