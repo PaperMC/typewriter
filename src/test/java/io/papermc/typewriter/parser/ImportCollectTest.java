@@ -6,6 +6,7 @@ import imports.FancyNewlineImportType;
 import imports.FancySpaceImportType;
 import imports.MixedCommentImportType;
 import imports.StandardImportType;
+import imports.UnicodeImportType;
 import io.papermc.typewriter.ClassNamed;
 import io.papermc.typewriter.context.ImportSet;
 import io.papermc.typewriter.context.ImportTypeCollector;
@@ -35,6 +36,7 @@ public class ImportCollectTest extends ParserTest {
     private static Stream<Arguments> fileProvider() {
         return Stream.of(
             StandardImportType.class,
+            UnicodeImportType.class,
             FancySpaceImportType.class,
             FancyCommentImportType.class,
             FancyNewlineImportType.class,

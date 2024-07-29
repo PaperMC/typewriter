@@ -1,0 +1,7 @@
+imports:
+  single:
+    - "imports.UnicodeImportType.ÉàAΩType"
+
+staticImports:
+  single:
+    - "imports.UnicodeImportType.ÉàAΩType"

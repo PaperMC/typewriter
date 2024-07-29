@@ -2,7 +2,7 @@ package io.papermc.typewriter.context;
 
 import com.google.common.base.Preconditions;
 import io.papermc.typewriter.ClassNamed;
-import io.papermc.typewriter.parser.ProtoTypeName;
+import io.papermc.typewriter.parser.name.ImportTypeName;
 import org.jetbrains.annotations.VisibleForTesting;
 
 import java.lang.reflect.Modifier;
@@ -15,6 +15,7 @@ import java.util.Set;
 public class ImportTypeCollector implements ImportCollector {
 
     private static final String JAVA_LANG_PACKAGE = "java.lang";
+    private static final String IMPORT_ON_DEMAND_IDENTIFIER = String.valueOf(ImportTypeName.IMPORT_ON_DEMAND_IDENTIFIER);
 
     private final Map<ClassNamed, String> typeCache = new HashMap<>();
 
@@ -40,8 +41,8 @@ public class ImportTypeCollector implements ImportCollector {
 
     @Override
     public void addImport(String typeName) {
-        if (typeName.endsWith("*")) {
-            this.globalImports.add(typeName.substring(0, typeName.lastIndexOf('.')));
+        if (typeName.endsWith(IMPORT_ON_DEMAND_IDENTIFIER)) {
+            this.globalImports.add(typeName.substring(0, typeName.lastIndexOf(ImportTypeName.IDENTIFIER_SEPARATOR)));
         } else {
             this.imports.add(typeName);
         }
@@ -49,10 +50,25 @@ public class ImportTypeCollector implements ImportCollector {
 
     @Override
     public void addStaticImport(String fullName) {
-        if (fullName.endsWith("*")) {
-            this.globalStaticImports.add(fullName.substring(0, fullName.lastIndexOf('.')));
+        if (fullName.endsWith(IMPORT_ON_DEMAND_IDENTIFIER)) {
+            this.globalStaticImports.add(fullName.substring(0, fullName.lastIndexOf(ImportTypeName.IDENTIFIER_SEPARATOR)));
         } else {
-            this.staticImports.put(fullName, fullName.substring(fullName.lastIndexOf('.') + 1));
+            this.staticImports.put(fullName, fullName.substring(fullName.lastIndexOf(ImportTypeName.IDENTIFIER_SEPARATOR) + 1));
+        }
+    }
+
+    public void addProtoImport(ImportTypeName typeName) {
+        // assume type name is valid (checkIntegrity + read time check)
+        if (!typeName.isStatic()) {
+            Set<String> imports = typeName.isGlobal() ? this.globalImports : this.imports;
+            imports.add(typeName.getTypeName());
+        } else {
+            String fullName = typeName.getTypeName();
+            if (typeName.isGlobal()) {
+                this.globalStaticImports.add(fullName);
+            } else {
+                this.staticImports.put(fullName, typeName.getStaticMemberName());
+            }
         }
     }
 
@@ -63,7 +79,7 @@ public class ImportTypeCollector implements ImportCollector {
         }
 
         // global imports
-        int lastDotIndex = fullName.lastIndexOf('.');
+        int lastDotIndex = fullName.lastIndexOf(ImportTypeName.IDENTIFIER_SEPARATOR);
         if (lastDotIndex == -1) {
             return fullName;
         }
@@ -149,7 +165,7 @@ public class ImportTypeCollector implements ImportCollector {
             }
         }
 
-        if (targetSize > fromSize && targetType.dottedNestedName().charAt(startOffset) == ProtoTypeName.IDENTIFIER_SEPARATOR) {
+        if (targetSize > fromSize && targetType.dottedNestedName().charAt(startOffset) == ImportTypeName.IDENTIFIER_SEPARATOR) {
             startOffset++;
         }
 

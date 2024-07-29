@@ -3,21 +3,21 @@ package io.papermc.typewriter.parser.step.sequence;
 import io.papermc.typewriter.parser.ClosureAdvanceResult;
 import io.papermc.typewriter.parser.LineParser;
 import io.papermc.typewriter.parser.ParserException;
-import io.papermc.typewriter.parser.ProtoTypeName;
+import io.papermc.typewriter.parser.name.ProtoTypeName;
 import io.papermc.typewriter.parser.StringReader;
 import io.papermc.typewriter.parser.closure.Closure;
 import io.papermc.typewriter.parser.closure.ClosureType;
 import io.papermc.typewriter.parser.step.IterativeStep;
 import io.papermc.typewriter.parser.step.StepHolder;
-import io.papermc.typewriter.utils.Formatting;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 // start once "@" is detected unless commented
-// order is: skipPartName -> checkAnnotationName -> checkOpenParenthesis (-> skipParentheses)
+// order is: skipTypeName -> checkAnnotationName -> checkOpenParenthesis (-> skipParentheses)
 public final class AnnotationSkipSteps implements StepHolder {
 
     public static boolean canStart(StringReader line) {
@@ -33,21 +33,22 @@ public final class AnnotationSkipSteps implements StepHolder {
     private @MonotonicNonNull ProtoTypeName name;
     private Closure parenthesisClosure;
 
-    public boolean skipPartName(StringReader line, LineParser parser) {
-        boolean checkStartId = this.name == null || this.name.shouldCheckStartIdentifier();
-
-        if (!checkStartId) { // this part is not in the import steps since import always need a semicolon at their end so it's easier to parse them
-            if (!parser.trySkipCommentOrWhitespaceUntil(line, ProtoTypeName.IDENTIFIER_SEPARATOR)) { // expect a dot for multi line annotation when the previous line doesn't end by a dot itself
-                return false;
-            }
-        } else {
-            parser.skipCommentOrWhitespace(line);
-        }
+    public boolean skipTypeName(StringReader line, LineParser parser) {
+        parser.skipCommentOrWhitespace(line);
         if (!line.canRead()) {
             return true;
         }
 
-        this.name = line.getPartNameUntil('(', parser::skipCommentOrWhitespace, this.name);
+        if (this.name == null) {
+            this.name = new ProtoTypeName(parser::skipCommentOrWhitespace) {
+                @Override
+                protected boolean ignoreKeyword(String keyword) {
+                    return keyword.equals("interface");
+                }
+            };
+        }
+
+        parser.getTypeNameUntil(line, '(', this.name);
 
         if (parser.peekSingleLineComment(line)) {
             // ignore single line comment at the end and allow the name to continue
@@ -95,21 +96,17 @@ public final class AnnotationSkipSteps implements StepHolder {
     }
 
     public void checkAnnotationName(StringReader line, LineParser parser) {
-        String name = this.name.getFinalName();
+        @Nullable String typeName = this.name.getTypeName();
 
-        if (name.isEmpty()) {
-            throw new ParserException("Invalid java source, annotation name is empty", line);
-        }
-
-        if (name.equals("interface")) {
-            // skip this one: annotation definition (@interface)
-            // note: this can't be skipped before (i.e. in canStart) since space/comments are allowed between '@' and 'interface'
-            parser.getSteps().clearRemaining();
-            return;
-        }
-
-        if (!Formatting.isValidName(name)) { // keyword are checked after to simplify things
-            throw new ParserException("Invalid java source, annotation name contains a reserved keyword or a syntax error", line);
+        @Nullable ParserException error = this.name.checkIntegrity();
+        if (error != null) {
+            if ("interface".equals(typeName)) {
+                // skip this one: annotation definition (@interface)
+                // note: this can't be skipped before (i.e. in canStart) since space/comments are allowed between '@' and 'interface'
+                parser.getSteps().clearRemaining();
+            } else {
+                throw error;
+            }
         }
     }
 
@@ -129,7 +126,7 @@ public final class AnnotationSkipSteps implements StepHolder {
     @Override
     public IterativeStep[] initialSteps() {
         return new IterativeStep[] {
-            this.repeatStep(this::skipPartName),
+            this.repeatStep(this::skipTypeName),
             this.onceStep(this::checkAnnotationName),
             this.repeatStep(this::checkOpenParenthesis),
         };

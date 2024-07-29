@@ -27,11 +27,6 @@ public class CodeBlock implements CodeEmitter {
         this.indentTokens = indentTokens;
     }
 
-    @Contract(value = "_ -> new", pure = true)
-    public static CodeBlock raw(String content) {
-        return of(LINE_BREAK_PATTERN.split(content, -1));
-    }
-
     @Contract(value = "_, _ -> new", pure = true)
     public static CodeBlock from(IndentUnit indentUnit, String content) {
         return from(indentUnit, LINE_BREAK_PATTERN.split(content, -1));
@@ -119,6 +114,11 @@ public class CodeBlock implements CodeEmitter {
         }
 
         return new CodeBlock(newlines, indentTokens);
+    }
+
+    @Contract(value = "_ -> new", pure = true)
+    public static CodeBlock of(String content) {
+        return of(LINE_BREAK_PATTERN.split(content, -1));
     }
 
     @Contract(value = "_ -> new", pure = true)

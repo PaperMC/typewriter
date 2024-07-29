@@ -5,6 +5,7 @@ import io.papermc.typewriter.context.ImportCollector;
 import io.papermc.typewriter.parser.closure.AbstractClosure;
 import io.papermc.typewriter.parser.closure.Closure;
 import io.papermc.typewriter.parser.closure.ClosureType;
+import io.papermc.typewriter.parser.name.ProtoTypeName;
 import io.papermc.typewriter.parser.step.StepManager;
 import io.papermc.typewriter.parser.step.sequence.AnnotationSkipSteps;
 import io.papermc.typewriter.parser.step.sequence.ImportStatementSteps;
@@ -176,6 +177,23 @@ public class LineParser {
     // note: always check single line comment AFTER multi line comment unless exception
     public boolean peekSingleLineComment(StringReader line) {
         return line.canRead(2) && line.peek() == '/' && line.peek(1) == '/';
+    }
+
+    public void getTypeNameUntil(StringReader line, char terminator, ProtoTypeName type) {
+        while (line.canRead()) {
+            int code = line.getString().codePointAt(line.getCursor());
+            if (code == terminator) {
+                type.checkIdentifier(0);
+                break;
+            }
+
+            int read = type.tryAdvance(code, line);
+            if (read == -1) {
+                break;
+            }
+
+            line.setCursor(line.getCursor() + read);
+        }
     }
 
     public boolean consumeImports(StringReader line, ImportCollector collector) {
