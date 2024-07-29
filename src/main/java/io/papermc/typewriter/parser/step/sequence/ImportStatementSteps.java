@@ -30,7 +30,7 @@ public final class ImportStatementSteps implements StepHolder {
     }
 
     public void enforceSpace(StringReader line, LineParser parser) {
-        int spaceSkipped = line.skipWhitespace();
+        int spaceSkipped = parser.skipAllWhitespace(line);
 
         boolean filledGap = false;
         filledGap |= parser.skipComment(line);

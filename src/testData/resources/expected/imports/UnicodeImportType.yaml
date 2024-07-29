@@ -1,5 +1,6 @@
 imports:
   single:
+    - "java.util.List"
     - "imports.UnicodeImportType.ÉàAΩType"
 
 staticImports:

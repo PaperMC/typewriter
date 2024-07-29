@@ -15,6 +15,7 @@ import org.checkerframework.framework.qual.DefaultQualifier;
 import org.jetbrains.annotations.ApiStatus;
 
 import java.util.List;
+import java.util.function.IntPredicate;
 
 @ApiStatus.Internal
 @DefaultQualifier(NonNull.class)
@@ -46,8 +47,8 @@ public class LineParser {
         return false;
     }
 
-    private boolean isCurrentlyEscaped(StringReader line) {
-        int delimiterCursor = line.getCursor() - 1; // escaped sequence is only a single char
+    private boolean isCurrentlyEscaped(StringReader line, int offset) {
+        int delimiterCursor = line.getCursor() - offset; // escaped sequence is only a single char
         int cursor = 1;
         while (delimiterCursor >= cursor && line.getString().charAt(delimiterCursor - cursor) == '\\') {
             cursor++;
@@ -68,7 +69,7 @@ public class LineParser {
         ClosureType type = closure.getType();
         if (line.trySkipString(type.end)) { // closure has been consumed
             // skip escape closed closure
-            if (type.escapableByPreviousChar() && this.isCurrentlyEscaped(line)) {
+            if (type.escapableByPreviousChar() && this.isCurrentlyEscaped(line, 1)) {
                 return ClosureAdvanceResult.SKIPPED;
             }
 
@@ -112,7 +113,7 @@ public class LineParser {
 
         if (line.trySkipString(type.end)) { // closure has been consumed
             // skip escape closed closure
-            if (type.escapableByPreviousChar() && this.isCurrentlyEscaped(line)) {
+            if (type.escapableByPreviousChar() && this.isCurrentlyEscaped(line, 1)) {
                 return ClosureAdvanceResult.SKIPPED;
             }
 
@@ -157,10 +158,65 @@ public class LineParser {
 
     public boolean skipCommentOrWhitespace(StringReader line) {
         boolean skipped = false;
-        while (this.skipComment(line) || line.skipWhitespace() > 0) {
+        while (this.skipComment(line) || line.skipWhitespace() > 0 || this.skipUnicodeEscape(line, Character::isWhitespace)) {
             skipped = true;
         }
         return skipped;
+    }
+
+    // unicode aware version of StringReader#skipWhitespace
+    public int skipAllWhitespace(StringReader line) {
+        int skipped = 0;
+        while (true) {
+            int actualCount = skipped;
+            skipped += line.skipWhitespace();
+            if (this.skipUnicodeEscape(line, Character::isWhitespace)) {
+                skipped++;
+            }
+            if (actualCount == skipped) {
+                // means nothing has been skipped in this turn
+                break;
+            }
+        }
+        return skipped;
+    }
+
+    // the compiler allow the whole program to be written using unicode escape (IDE might complain tho) to simplify things only
+    // handle whitespace escape for now
+    private boolean skipUnicodeEscape(StringReader line, IntPredicate canSkip) {
+        if (!line.canRead(2 + 4)) { // minimal size is \\uXXXX
+            return false;
+        }
+
+        if (line.peek() == '\\') { // check unicode escape
+            if (this.isCurrentlyEscaped(line, 0)) { // check if backslash is escaped itself
+                return false;
+            }
+
+            int prefixCursor = 1;
+            while (line.canRead(prefixCursor + 1) && line.peek(prefixCursor) == 'u') { // match as many unicode marker ('u') as possible
+                prefixCursor++;
+            }
+
+            if (prefixCursor > 1) { // found unicode sequence -> parse 4 hexadecimal digits
+                int cursor = line.getCursor();
+                String hexValue = line.getString().substring(cursor + prefixCursor, cursor + prefixCursor + 4);
+                final int codePoint;
+                try {
+                    codePoint = Integer.parseInt(hexValue, 16);
+                } catch (NumberFormatException ex) {
+                    ParserException error = new ParserException("Invalid java source, found a malformed unicode escape sequence (" + hexValue + ")", line);
+                    error.addSuppressed(ex);
+                    throw error;
+                }
+
+                if (canSkip.test(codePoint)) {
+                    line.setCursor(cursor + prefixCursor + 4);
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     public boolean trySkipCommentOrWhitespaceUntil(StringReader line, char terminator) {
