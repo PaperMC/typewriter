@@ -55,7 +55,7 @@ public class LineParser {
         }
 
         int escapedBlock = cursor - 1;
-        return (escapedBlock & 1) != 0; // odd size means the delimiter is always escaped
+        return (escapedBlock & 1) != 0; // odd size means the char is always escaped
     }
 
     // for all closure, leaf closure type should use the other similar method after this one if possible
@@ -183,14 +183,15 @@ public class LineParser {
 
     // the compiler allow the whole program to be written using unicode escape (IDE might complain tho) to simplify things only
     // handle whitespace escape for now
-    private boolean skipUnicodeEscape(StringReader line, IntPredicate canSkip) {
+    // return codePoint << 32 | escapeSize
+    private @Nullable Long parseUnicodeEscape(StringReader line) {
         if (!line.canRead(2 + 4)) { // minimal size is \\uXXXX
-            return false;
+            return null;
         }
 
-        if (line.peek() == '\\') { // check unicode escape
+        if (line.peek() == '\\') {
             if (this.isCurrentlyEscaped(line, 0)) { // check if backslash is escaped itself
-                return false;
+                return null;
             }
 
             int prefixCursor = 1;
@@ -199,6 +200,10 @@ public class LineParser {
             }
 
             if (prefixCursor > 1) { // found unicode sequence -> parse 4 hexadecimal digits
+                if (!line.canRead(prefixCursor + 4)) {
+                    throw new ParserException("Invalid java source, found a malformed unicode escape sequence: missing code point value", line);
+                }
+
                 int cursor = line.getCursor();
                 String hexValue = line.getString().substring(cursor + prefixCursor, cursor + prefixCursor + 4);
                 final int codePoint;
@@ -210,11 +215,53 @@ public class LineParser {
                     throw error;
                 }
 
-                if (canSkip.test(codePoint)) {
-                    line.setCursor(cursor + prefixCursor + 4);
-                    return true;
-                }
+                return ((long) codePoint << 32L) | (prefixCursor + 4L);
             }
+        }
+        return null;
+    }
+
+    private boolean skipUnicodeEscape(StringReader line, IntPredicate canSkip) {
+        @Nullable Long unicodeEscape = parseUnicodeEscape(line);
+        if (unicodeEscape == null) {
+            return false;
+        }
+
+        int hiCodePoint = (int) (unicodeEscape.longValue() >>> 32);
+        char hi = (char) hiCodePoint; // safe cast char is on 16 bits like UTF-16 escape sequence
+        int skipped = unicodeEscape.intValue();
+        if (!Character.isHighSurrogate(hi)) {
+            if (canSkip.test(hiCodePoint)) {
+                // regular unicode escape for non-astral code point (plane 0)
+                line.setCursor(line.getCursor() + skipped);
+                return true;
+            } else {
+                return false;
+            }
+        }
+
+        @Nullable Long nextUnicodeEscape;
+        int previousCursor = line.getCursor();
+        line.setCursor(line.getCursor() + skipped);
+        try {
+            nextUnicodeEscape = this.parseUnicodeEscape(line);
+        } finally {
+            line.setCursor(previousCursor);
+        }
+
+        if (nextUnicodeEscape == null) {
+            throw new ParserException("Invalid java source, found a high surrogate character without its sibling", line);
+        }
+
+        char lo = (char) (nextUnicodeEscape.longValue() >>> 32);
+        if (!Character.isLowSurrogate(lo)) {
+            throw new ParserException("Invalid java source, found a malformed surrogate pair: low surrogate is invalid", line);
+        }
+
+        if (canSkip.test(Character.toCodePoint(hi, lo))) {
+            skipped += nextUnicodeEscape.intValue();
+            line.setCursor(line.getCursor() + skipped);
+            return true;
         }
         return false;
     }

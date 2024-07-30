@@ -7,7 +7,7 @@ import java.util.function.Predicate;
 
 public class ImportTypeName extends ProtoTypeName {
 
-    public static final char IMPORT_ON_DEMAND_IDENTIFIER = '*';
+    public static final char IMPORT_ON_DEMAND_MARKER = '*';
 
     private final boolean isStatic;
     private String staticMemberName;
@@ -44,7 +44,7 @@ public class ImportTypeName extends ProtoTypeName {
 
     @Override
     protected boolean isValid(int codePoint) {
-        if (this.checkStartId && codePoint == IMPORT_ON_DEMAND_IDENTIFIER) {
+        if (this.checkStartId && codePoint == IMPORT_ON_DEMAND_MARKER) {
             this.global = true;
             return true;
         }
@@ -55,7 +55,7 @@ public class ImportTypeName extends ProtoTypeName {
     @Override
     protected void append(char... chars) {
         if (this.locked) {
-            throw new ParserException("Invalid java source, found a '%c' char in the middle of import type name".formatted(IMPORT_ON_DEMAND_IDENTIFIER), this.previousLine);
+            throw new ParserException("Invalid java source, found a '%c' char in the middle of import type name".formatted(IMPORT_ON_DEMAND_MARKER), this.previousLine);
         } else if (this.global) {
             this.locked = true;
         }

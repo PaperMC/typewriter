@@ -15,7 +15,7 @@ import java.util.Set;
 public class ImportTypeCollector implements ImportCollector {
 
     private static final String JAVA_LANG_PACKAGE = "java.lang";
-    private static final String IMPORT_ON_DEMAND_IDENTIFIER = String.valueOf(ImportTypeName.IMPORT_ON_DEMAND_IDENTIFIER);
+    private static final String IMPORT_ON_DEMAND_MARKER = String.valueOf(ImportTypeName.IMPORT_ON_DEMAND_MARKER);
 
     private final Map<ClassNamed, String> typeCache = new HashMap<>();
 
@@ -41,7 +41,7 @@ public class ImportTypeCollector implements ImportCollector {
 
     @Override
     public void addImport(String typeName) {
-        if (typeName.endsWith(IMPORT_ON_DEMAND_IDENTIFIER)) {
+        if (typeName.endsWith(IMPORT_ON_DEMAND_MARKER)) {
             this.globalImports.add(typeName.substring(0, typeName.lastIndexOf(ImportTypeName.IDENTIFIER_SEPARATOR)));
         } else {
             this.imports.add(typeName);
@@ -50,7 +50,7 @@ public class ImportTypeCollector implements ImportCollector {
 
     @Override
     public void addStaticImport(String fullName) {
-        if (fullName.endsWith(IMPORT_ON_DEMAND_IDENTIFIER)) {
+        if (fullName.endsWith(IMPORT_ON_DEMAND_MARKER)) {
             this.globalStaticImports.add(fullName.substring(0, fullName.lastIndexOf(ImportTypeName.IDENTIFIER_SEPARATOR)));
         } else {
             this.staticImports.put(fullName, fullName.substring(fullName.lastIndexOf(ImportTypeName.IDENTIFIER_SEPARATOR) + 1));
