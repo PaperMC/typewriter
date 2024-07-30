@@ -36,10 +36,16 @@ public class ProtoTypeName { // todo add test for this class for non finite type
                 if (this.cleaner.test(line)) {
                     return 0;
                 }
-            } else if (this.separatorExpected || this.previousLine != line) { // on newline expect a dot, identifier cannot be split in two
-                this.separatorExpected = false;
-                if (codePoint != IDENTIFIER_SEPARATOR) {
-                    return -1;
+            } else {
+                if (Character.isIdentifierIgnorable(codePoint)) {
+                    return Character.charCount(codePoint);
+                }
+
+                if (this.separatorExpected || this.previousLine != line) { // on newline expect a dot, identifier cannot be split in two
+                    this.separatorExpected = false;
+                    if (codePoint != IDENTIFIER_SEPARATOR) {
+                        return -1;
+                    }
                 }
             }
         }
