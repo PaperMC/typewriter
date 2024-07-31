@@ -2,10 +2,10 @@ package imports;
 
 // 𗙤 gradle panic on special character so no test for them :/
 
-import java.util.\u000A\u0009\uuuuu0020List;
+import java.util.\u000A\u000DList; // line terminator
 import imports.UnicodeImportType.ÉàAΩType;
-import\uuuuu0020static imports.UnicodeImportType.ÉàAΩType;
-/* surrogate pair: import\uuuuu0020static imports.UnicodeImportType.ÉàAΩ\uD81D\uDE64Type; */
+import\uuuuu0020static\u000Cimports.\u0009UnicodeImportType\uuuuu0020.ÉàAΩType; // space
+/* surrogate pair: import static imports.UnicodeImportType.ÉàAΩ\uD81D\uDE64Type; */
 
 public class UnicodeImportType {
     {

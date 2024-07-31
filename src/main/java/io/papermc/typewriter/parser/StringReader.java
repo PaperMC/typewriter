@@ -71,7 +71,7 @@ public class StringReader {
 
     public int skipWhitespace() {
         int i = 0;
-        while (this.canRead() && Character.isWhitespace(this.peek())) {
+        while (this.canRead() && Lexer.isWhitespace(this.peek())) {
             this.skip();
             i++;
         }
@@ -106,7 +106,7 @@ public class StringReader {
 
         int delta = 0;
         int previousCursor = this.cursor;
-        while (delta < size && Character.isWhitespace(this.peek())) {
+        while (delta < size && Lexer.isWhitespace(this.peek())) {
             this.skip();
             delta++;
         }

@@ -158,7 +158,7 @@ public class LineParser {
 
     public boolean skipCommentOrWhitespace(StringReader line) {
         boolean skipped = false;
-        while (this.skipComment(line) || line.skipWhitespace() > 0 || this.skipUnicodeEscape(line, Character::isWhitespace)) {
+        while (this.skipComment(line) || line.skipWhitespace() > 0 || this.skipUnicodeEscape(line, Lexer::isWhitespace)) {
             skipped = true;
         }
         return skipped;
@@ -170,7 +170,7 @@ public class LineParser {
         while (true) {
             int actualCount = skipped;
             skipped += line.skipWhitespace();
-            if (this.skipUnicodeEscape(line, Character::isWhitespace)) {
+            if (this.skipUnicodeEscape(line, Lexer::isWhitespace)) {
                 skipped++;
             }
             if (actualCount == skipped) {
@@ -185,7 +185,7 @@ public class LineParser {
     // handle whitespace escape for now
     // return codePoint << 32 | escapeSize
     private @Nullable Long parseUnicodeEscape(StringReader line) {
-        if (!line.canRead(2 + 4)) { // minimal size is \\uXXXX
+        if (!line.canRead(2)) { // prefix size is \\u
             return null;
         }
 
@@ -194,28 +194,29 @@ public class LineParser {
                 return null;
             }
 
-            int prefixCursor = 1;
-            while (line.canRead(prefixCursor + 1) && line.peek(prefixCursor) == 'u') { // match as many unicode marker ('u') as possible
-                prefixCursor++;
+            int prefixSize = 1;
+            while (line.canRead(prefixSize + 1) && line.peek(prefixSize) == 'u') { // match as many unicode marker ('u') as possible
+                prefixSize++;
             }
 
-            if (prefixCursor > 1) { // found unicode sequence -> parse 4 hexadecimal digits
-                if (!line.canRead(prefixCursor + 4)) {
-                    throw new ParserException("Invalid java source, found a malformed unicode escape sequence: missing code point value", line);
+            if (prefixSize > 1) { // found unicode sequence -> parse 4 hexadecimal digits
+                if (!line.canRead(prefixSize + 4)) {
+                    throw new ParserException("Invalid java source, found a malformed unicode escape sequence: missing/incomplete code point value", line);
                 }
 
-                int cursor = line.getCursor();
-                String hexValue = line.getString().substring(cursor + prefixCursor, cursor + prefixCursor + 4);
-                final int codePoint;
-                try {
-                    codePoint = Integer.parseInt(hexValue, 16);
-                } catch (NumberFormatException ex) {
-                    ParserException error = new ParserException("Invalid java source, found a malformed unicode escape sequence (" + hexValue + ")", line);
-                    error.addSuppressed(ex);
-                    throw error;
+                int codePoint = 0;
+                for (int i = 0; i < 4; i++) {
+                    char c = line.peek(prefixSize + i);
+                    int digit = Character.digit(c, 16);
+                    if (digit == -1) {
+                        String read = line.getRemaining().substring(0, prefixSize + i);
+                        throw new ParserException("Invalid java source, found a malformed unicode escape sequence: invalid hexadecimal digit '%c' after %s".formatted(c, read), line);
+                    }
+
+                    codePoint = codePoint << 4 | digit;
                 }
 
-                return ((long) codePoint << 32L) | (prefixCursor + 4L);
+                return ((long) codePoint << 32) | (prefixSize + 4);
             }
         }
         return null;
@@ -227,17 +228,21 @@ public class LineParser {
             return false;
         }
 
-        int hiCodePoint = (int) (unicodeEscape.longValue() >>> 32);
-        char hi = (char) hiCodePoint; // safe cast char is on 16 bits like UTF-16 escape sequence
+        int codePoint = (int) (unicodeEscape.longValue() >>> 32);
         int skipped = unicodeEscape.intValue();
-        if (!Character.isHighSurrogate(hi)) {
-            if (canSkip.test(hiCodePoint)) {
+        if (!Character.isSurrogate((char) codePoint)) { // safe cast char is on 16 bits like UTF-16 escape sequence
+            if (canSkip.test(codePoint)) {
                 // regular unicode escape for non-astral code point (plane 0)
                 line.setCursor(line.getCursor() + skipped);
                 return true;
             } else {
                 return false;
             }
+        }
+
+        char hi = (char) codePoint;
+        if (!Character.isHighSurrogate(hi)) {
+            throw new ParserException("Invalid java source, found a low surrogate (\\u%04X) before its sibling".formatted(codePoint), line);
         }
 
         @Nullable Long nextUnicodeEscape;
@@ -250,12 +255,12 @@ public class LineParser {
         }
 
         if (nextUnicodeEscape == null) {
-            throw new ParserException("Invalid java source, found a high surrogate character without its sibling", line);
+            throw new ParserException("Invalid java source, found a high surrogate (\\u%04X) without its sibling".formatted(codePoint), line);
         }
 
         char lo = (char) (nextUnicodeEscape.longValue() >>> 32);
         if (!Character.isLowSurrogate(lo)) {
-            throw new ParserException("Invalid java source, found a malformed surrogate pair: low surrogate is invalid", line);
+            throw new ParserException("Invalid java source, found a malformed surrogate pair: low surrogate is invalid (\\u%04X)".formatted((int) lo), line);
         }
 
         if (canSkip.test(Character.toCodePoint(hi, lo))) {
