@@ -3,19 +3,19 @@ package io.papermc.typewriter.parser;
 import io.papermc.typewriter.SourceFile;
 import org.jetbrains.annotations.Contract;
 
-public class ParserException extends IllegalStateException {
+public class LexerException extends IllegalStateException {
 
-    private final StringReader reader;
+    private final UnicodeTranslates reader;
     private SourceFile file;
     private int lineCount;
 
-    public ParserException(String message, StringReader reader) {
+    public LexerException(String message, UnicodeTranslates reader) {
         super(message);
         this.reader = reader;
     }
 
     @Contract(value = "_, _ -> this", mutates = "this")
-    public ParserException withAdditionalContext(SourceFile file, int lineCount) {
+    public LexerException withAdditionalContext(SourceFile file, int lineCount) {
         this.file = file;
         this.lineCount = lineCount;
         return this;
@@ -28,9 +28,7 @@ public class ParserException extends IllegalStateException {
         if (this.reader.canRead()) {
             message.append(" (").append(this.reader.peek()).append(')');
         }
-        if (this.file == null) {
-            message.append(" (in line: ").append('"').append(this.reader.getString()).append('"').append(')');
-        } else {
+        if (this.file != null) {
             message.append(" in line ").append(this.lineCount).append(" from class ").append(this.file.mainClass().canonicalName());
         }
 

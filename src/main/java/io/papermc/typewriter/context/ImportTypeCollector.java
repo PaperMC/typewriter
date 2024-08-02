@@ -3,6 +3,7 @@ package io.papermc.typewriter.context;
 import com.google.common.base.Preconditions;
 import io.papermc.typewriter.ClassNamed;
 import io.papermc.typewriter.parser.name.ImportTypeName;
+import io.papermc.typewriter.parser.token.TokenType;
 import org.jetbrains.annotations.VisibleForTesting;
 
 import java.lang.reflect.Modifier;
@@ -15,7 +16,7 @@ import java.util.Set;
 public class ImportTypeCollector implements ImportCollector {
 
     private static final String JAVA_LANG_PACKAGE = "java.lang";
-    private static final String IMPORT_ON_DEMAND_MARKER = String.valueOf(ImportTypeName.IMPORT_ON_DEMAND_MARKER);
+    private static final String IMPORT_ON_DEMAND_MARKER = TokenType.STAR.name;
 
     private final Map<ClassNamed, String> typeCache = new HashMap<>();
 
@@ -63,11 +64,10 @@ public class ImportTypeCollector implements ImportCollector {
             Set<String> imports = typeName.isGlobal() ? this.globalImports : this.imports;
             imports.add(typeName.getTypeName());
         } else {
-            String fullName = typeName.getTypeName();
             if (typeName.isGlobal()) {
-                this.globalStaticImports.add(fullName);
+                this.globalStaticImports.add(typeName.getTypeName());
             } else {
-                this.staticImports.put(fullName, typeName.getStaticMemberName());
+                this.staticImports.put(typeName.getTypeName(), typeName.getStaticMemberName());
             }
         }
     }

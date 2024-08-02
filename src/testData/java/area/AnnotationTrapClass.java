@@ -17,7 +17,7 @@ package area;
     /* ) { */ // ) {
     /* ) { */
     )
-public class AnnotationTrapClass { // << 33
+public class AnnotationTrapClass { // 566
 
     @interface Trapped {
         String[] strings();

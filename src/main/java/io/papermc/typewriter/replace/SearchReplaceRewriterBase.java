@@ -6,9 +6,9 @@ import io.papermc.typewriter.SourceFile;
 import io.papermc.typewriter.SourceRewriter;
 import io.papermc.typewriter.context.ImportCollector;
 import io.papermc.typewriter.context.ImportTypeCollector;
-import io.papermc.typewriter.parser.LineParser;
-import io.papermc.typewriter.parser.ParserException;
+import io.papermc.typewriter.parser.Lexer;
 import io.papermc.typewriter.parser.StringReader;
+import io.papermc.typewriter.parser.TokenParser;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.framework.qual.DefaultQualifier;
@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
+import java.io.CharArrayReader;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -38,8 +39,15 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
         StringBuilder content = new StringBuilder();
 
         if (Files.isRegularFile(path)) {
+            final Lexer lex;
+            final ImportCollector collector;
             try (BufferedReader buffer = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
-                searchAndReplace(file, buffer, content);
+                lex = Lexer.fromReader(buffer);
+                collector = collectImport(file, lex);
+            }
+
+            try (BufferedReader reader = new BufferedReader(new CharArrayReader(lex.toCharArray()))) {
+                searchAndReplace(file, reader, collector, content);
             }
         } else {
             LOGGER.warn("Target source file '{}' doesn't exists, dumping rewriters data instead...", filePath);
@@ -73,7 +81,15 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
         }
     }
 
-    private void searchAndReplace(SourceFile source, BufferedReader reader, StringBuilder content) throws IOException {
+    private ImportCollector collectImport(SourceFile source, Lexer lexer) {
+        final ImportCollector importCollector = new ImportTypeCollector(source.mainClass());
+
+        final TokenParser tokenParser = new TokenParser(lexer);
+        tokenParser.collectImports(importCollector);
+        return importCollector;
+    }
+
+    private void searchAndReplace(SourceFile source, BufferedReader reader, ImportCollector importCollector, StringBuilder content) throws IOException {
         Set<SearchReplaceRewriter> rewriters = this.getRewriters();
         Preconditions.checkState(!rewriters.isEmpty());
 
@@ -81,12 +97,9 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
         Set<SearchReplaceRewriter> unusedRewriters = new HashSet<>(rewriters);
         @Nullable StringBuilder strippedContent = null;
 
-        final ImportCollector importCollector = new ImportTypeCollector(source.mainClass());
-        final LineParser lineParser = new LineParser();
-
         @Nullable String indent = null;
         @Nullable SearchReplaceRewriter foundRewriter = null;
-        boolean inBody = false;
+
         int i = 0;
         while (true) {
             String line = reader.readLine();
@@ -95,21 +108,6 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
             }
 
             StringReader lineIterator = new StringReader(line);
-            // collect import to avoid fqn when not needed
-            int previousCursor = lineIterator.getCursor();
-            if (importCollector != ImportCollector.NO_OP && !inBody && foundRewriter == null && !line.isEmpty()) {
-                final boolean reachBody;
-                try {
-                    reachBody = lineParser.consumeImports(lineIterator, importCollector);
-                } catch (ParserException ex) {
-                    throw ex.withAdditionalContext(source, i + 1);
-                }
-                if (reachBody) {
-                    inBody = true;
-                }
-            }
-            lineIterator.setCursor(previousCursor);
-
             CommentMarker marker = EMPTY_MARKER;
             if (!line.isEmpty()) {
                 marker = searchMarker(
@@ -134,7 +132,7 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
                             content.append('\n');
                         }
 
-                        foundRewriter.options.targetClass().ifPresentOrElse(importCollector::setAccessSource, () -> importCollector.setAccessSource(null));
+                        foundRewriter.options.targetClass().ifPresentOrElse(importCollector::setAccessSource, () -> importCollector.setAccessSource(null)); // todo this could be handled by the lexer prolly just need to take care of local class
                         foundRewriter.insert(new SearchMetadata(source, importCollector, indent, strippedContent.toString(), i), content);
                         strippedContent = null;
                     }

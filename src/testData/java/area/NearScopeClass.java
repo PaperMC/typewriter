@@ -1,4 +1,4 @@
 package area;
 
-public class NearScopeClass{ // << 27
+public class NearScopeClass{ // 43
 }

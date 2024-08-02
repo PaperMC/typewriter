@@ -1,4 +1,4 @@
 package area;
 
-public/* d */class/* d */FancyScopeClass2/* d */ /* d */{//d // << 56
+public/* d */class/* d */FancyScopeClass2/* d */ /* d */{// 72
 }
