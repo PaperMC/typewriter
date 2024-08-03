@@ -6,5 +6,7 @@ public interface Token {
 
     Object value();
 
-    Token UNKNOWN = new RawToken(TokenType.UNKNOWN, -1);
+    int row();
+
+    int column();
 }

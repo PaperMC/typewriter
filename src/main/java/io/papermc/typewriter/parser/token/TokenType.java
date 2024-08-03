@@ -25,13 +25,14 @@ public enum TokenType {
     AT_SIGN("@"),
     DOT("."),
     SECO(";"),
+    CO(","),
     COMMENT(null),
     SINGLE_COMMENT(null),
     JAVADOC(null),
     @ApiStatus.Experimental
     MARKDOWN_JAVADOC(null),
     IDENTIFIER(null),
-    UNKNOWN(null);
+    EOI(null);
 
     public final @Nullable String name;
     TokenType(@Nullable String name) {

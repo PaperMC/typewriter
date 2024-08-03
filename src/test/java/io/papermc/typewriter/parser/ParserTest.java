@@ -2,6 +2,7 @@ package io.papermc.typewriter.parser;
 
 import io.papermc.typewriter.context.ImportCollector;
 import io.papermc.typewriter.parser.token.Token;
+import io.papermc.typewriter.parser.token.TokenType;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.jupiter.api.Tag;
 
@@ -30,7 +31,7 @@ public class ParserTest {
             final TokenParser tokenParser = new TokenParser(lex);
             Token token = tokenParser.collectImports(importCollector);
             if (lastTokenCallback != null) {
-                if (token == null) {
+                if (token == null || token.type() == TokenType.EOI) {
                     fail("File is empty or doesn't contains the required top level scope needed for this test to run");
                 }
                 lastTokenCallback.accept(lex, token);

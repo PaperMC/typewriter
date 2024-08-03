@@ -1,13 +1,17 @@
 package io.papermc.typewriter.parser;
 
-public class UnicodeTranslates {
+import io.papermc.typewriter.parser.exception.LexerException;
+
+public class UnicodeTranslator {
     protected int cursor;
-    private final char[] value;
+    private final char[] input;
     private int charSize = 1; // char size representation in the buffer (size of the escape), surrogate pair are handled
     protected final char[] codePointBuffer; // code point buffer holding character representation of the code point, limited to 2
+    private int column; // character count (0-indexed) after unicode translation
+    private int row = 1; // line count
 
-    public UnicodeTranslates(char[] value) {
-        this.value = value;
+    public UnicodeTranslator(char[] input) {
+        this.input = input;
         this.codePointBuffer = new char[2];
     }
 
@@ -17,7 +21,7 @@ public class UnicodeTranslates {
 
     public char read() {
         if (!this.canRead()) {
-            throw new RuntimeException("Expected to read a new character at " + this.cursor);
+            throw new LexerException("Expected to read a new character", this);
         }
         char c = this.peek(0);
         this.incrCursor();
@@ -56,31 +60,33 @@ public class UnicodeTranslates {
 
     public void incrCursor() {
         this.cursor += this.charSize;
+        this.column++;
     }
 
-    public char peek(int offset) {
-        char c = this.value[this.cursor + offset];
+    private char peek(int offset) {
+        char c = this.input[this.cursor + offset];
         if (c != '\\') {
             this.charSize = 1;
             return c;
         }
 
         int prefixSize = 1;
-        while (this.canRead(offset + prefixSize + 1) && this.peek(offset + prefixSize) == 'u') { // match as many unicode marker ('u') as possible
+        while (this.canRead(offset + prefixSize + 1) && this.input[this.cursor + offset + prefixSize] == 'u') { // match as many unicode marker ('u') as possible
             prefixSize++;
         }
 
         if (prefixSize > 1) { // found unicode sequence -> parse 4 hexadecimal digits
             if (!this.canRead(offset + prefixSize + 4)) {
-                throw new RuntimeException("Invalid java source, found a malformed unicode escape sequence: missing/incomplete code point value");
+                throw new LexerException("Invalid java source, found a malformed unicode escape sequence: missing/incomplete code point value", this);
             }
 
             int codePoint = 0;
             for (int i = 0; i < 4; i++) {
-                char c2 = this.peek(offset + prefixSize + i);
+                char c2 = this.input[this.cursor + offset + prefixSize + i];
                 int digit = Character.digit(c2, 16);
                 if (digit == -1) {
-                    throw new RuntimeException("Invalid java source, found a malformed unicode escape sequence: invalid hexadecimal digit '%c'".formatted(c2));
+                    int contiguousSize = isUnicodeEscape() ? 1 : 0;
+                    throw new LexerException("Invalid java source, found a malformed unicode escape sequence: invalid hexadecimal digit '%c'".formatted(c2), this, contiguousSize + prefixSize + i);
                 }
 
                 codePoint = codePoint << 4 | digit;
@@ -109,16 +115,16 @@ public class UnicodeTranslates {
 
         if (Character.isHighSurrogate(hi)) {
             if (!this.canRead(offset + size + 1)) {
-                throw new RuntimeException("Invalid java source, found a high surrogate (\\u%04X) without its sibling".formatted((int) hi));
+                throw new LexerException("Invalid java source, found a high surrogate (\\u%04X) without its sibling".formatted((int) hi), this);
             }
 
             char lo = this.peek(offset + size);
             if (isNewline(lo)) { // special case since the buffer is read entirely with its newline
-                throw new RuntimeException("Invalid java source, found a high surrogate (\\u%04X) without its sibling".formatted((int) hi));
+                throw new LexerException("Invalid java source, found a high surrogate (\\u%04X) without its sibling".formatted((int) hi), this);
             }
 
             if (!Character.isLowSurrogate(lo)) {
-                throw new RuntimeException("Invalid java source, found a malformed surrogate pair: low surrogate is invalid (\\u%04X)".formatted((int) lo));
+                throw new LexerException("Invalid java source, found a malformed surrogate pair: low surrogate is invalid (\\u%04X)".formatted((int) lo), this);
             }
 
             this.codePointBuffer[1] = lo;
@@ -127,7 +133,7 @@ public class UnicodeTranslates {
 
             return Character.toCodePoint(hi, lo);
         } else {
-            throw new RuntimeException("Invalid java source, found a low surrogate (\\u%04X) before its sibling".formatted((int) hi));
+            throw new LexerException("Invalid java source, found a low surrogate (\\u%04X) before its sibling".formatted((int) hi), this);
         }
     }
 
@@ -136,7 +142,7 @@ public class UnicodeTranslates {
     }
 
     public boolean canRead(int length) {
-        return this.cursor + length <= this.value.length;
+        return this.cursor + length <= this.input.length;
     }
 
     protected boolean isSpace(char c) {
@@ -157,8 +163,21 @@ public class UnicodeTranslates {
         return this.cursor;
     }
 
+    protected void visitLineTerminator() {
+        this.row++;
+        this.column = 0;
+    }
+
+    public int getColumn() {
+        return this.column;
+    }
+
+    public int getRow() {
+        return this.row;
+    }
+
     // doesn't copy the array
     public char[] toCharArray() {
-        return this.value;
+        return this.input;
     }
 }

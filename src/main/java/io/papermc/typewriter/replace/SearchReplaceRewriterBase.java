@@ -9,6 +9,7 @@ import io.papermc.typewriter.context.ImportTypeCollector;
 import io.papermc.typewriter.parser.Lexer;
 import io.papermc.typewriter.parser.StringReader;
 import io.papermc.typewriter.parser.TokenParser;
+import io.papermc.typewriter.parser.exception.ReaderException;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.framework.qual.DefaultQualifier;
@@ -44,6 +45,8 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
             try (BufferedReader buffer = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
                 lex = Lexer.fromReader(buffer);
                 collector = collectImport(file, lex);
+            } catch (ReaderException ex) {
+                throw ex.withAdditionalContext(file);
             }
 
             try (BufferedReader reader = new BufferedReader(new CharArrayReader(lex.toCharArray()))) {

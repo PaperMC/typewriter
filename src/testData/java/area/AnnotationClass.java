@@ -10,7 +10,7 @@ import java.lang.annotation.Target;
     ElementType.TYPE, ElementType.ANNOTATION_TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR, ElementType.FIELD, ElementType.PACKAGE
 })
 @AnnotationClass.NestedAnnot@AnnotationClass.NestedAnnot2
-public @interface AnnotationClass { // 453
+public @interface AnnotationClass { // 452
     // @interface should be invalidated and not detected as an annotation
     // via its keyword: interface
 

@@ -9,6 +9,6 @@ package area;
         }
         )
 // Paper
-public class FancyNewlineAnnotationPresentClass { // 203
+public class FancyNewlineAnnotationPresentClass { // 202
 
 }

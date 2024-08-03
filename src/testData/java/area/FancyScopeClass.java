@@ -2,5 +2,5 @@ package area;
 
 ;;;
 ;;;public/* d */class/* d */FancyScopeClass/* d */
-    /* d */{ // 82
+    /* d */{ // 81
 }

@@ -16,6 +16,6 @@ package area;
 @/* a*/
     AnnotationClass/* a*/./* a*/
         NestedAnnot2/* a*///a/* a*/
-public class MixedAnnotationPresentClass { // 404
+public class MixedAnnotationPresentClass { // 403
 
 }
