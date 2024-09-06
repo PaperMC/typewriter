@@ -9,4 +9,6 @@ public interface Token {
     int row();
 
     int column();
+
+    int pos();
 }

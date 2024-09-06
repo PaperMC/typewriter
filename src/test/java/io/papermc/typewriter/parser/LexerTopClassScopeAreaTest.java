@@ -58,10 +58,9 @@ public class LexerTopClassScopeAreaTest extends ParserTest {
         final ImportTypeCollector importCollector = new ImportTypeCollector(new ClassNamed(sampleClass));
 
         parseFile(path, importCollector, (lex, token) -> {
-            RawToken rToken = ((RawToken) token);
             Token nextToken = lex.readToken();
             assertSame(TokenType.SINGLE_COMMENT, nextToken.type());
-            assertEquals(Integer.parseInt(((CharSequenceToken) nextToken).value().stripLeading()), rToken.pos());
+            assertEquals(Integer.parseInt(((CharSequenceToken) nextToken).value().stripLeading()), token.pos());
         });
     }
 }

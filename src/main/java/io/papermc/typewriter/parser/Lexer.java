@@ -5,19 +5,24 @@ import io.papermc.typewriter.parser.token.CharSequenceBlockToken;
 import io.papermc.typewriter.parser.token.CharSequenceToken;
 import io.papermc.typewriter.parser.token.RawToken;
 import io.papermc.typewriter.parser.token.Token;
+import io.papermc.typewriter.parser.token.TokenPosition;
 import io.papermc.typewriter.parser.token.TokenType;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.jetbrains.annotations.ApiStatus;
 
 import java.io.CharArrayWriter;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class Lexer extends UnicodeTranslator {
 
     private final StringBuilder buffer; // generic buffer for single line element or used as temporary storage before being pushed into line buffer
     private final List<String> lineBuffer; // line buffer for multi line block
+    private RelativeTextBlock textBlock; // text block support
 
     public Lexer(char[] input) {
         super(input);
@@ -53,20 +58,35 @@ public class Lexer extends UnicodeTranslator {
     }
 
     public void appendCodePoint() {
-        this.buffer.append(this.codePointBuffer[0]);
-        if (this.codePointBuffer[1] != '\0') {
-            this.buffer.append(this.codePointBuffer[1]);
+        this.buffer.append(this.codePointCache[0]);
+        if (this.codePointCache[1] != '\0') {
+            this.buffer.append(this.codePointCache[1]);
         }
     }
 
-    // handle all regular escape, unicode escape are done before and might form another regular escape after the first conversion
-    public void appendLiteral(char c) {
+    // handle all regular escape (except text block specific), unicode escape are done before and might form another regular escape after the first conversion
+    public void appendLiteral(char c, @Nullable RelativeTextBlock textBlock) {
         if (c != '\\') {
             this.buffer.append(c);
             return;
         }
 
-        char initialChar = this.read();
+        boolean skipIncrement = false;
+        char initialChar = this.peek();
+        if (textBlock != null) {
+            if (isLineTerm(initialChar)) { // \ is used to consider the next line in text block as the same line
+                textBlock.notifyEscape(RelativeTextBlock.EscapeType.NEW_LINE);
+                return;
+            }
+            if (initialChar == 's') {
+                this.incrCursor();
+                skipIncrement = true;
+                if (isLineTerm(this.peek())) {
+                    textBlock.notifyEscape(RelativeTextBlock.EscapeType.SPACE);
+                }
+            }
+        }
+
         char translatedChar;
         switch (initialChar) {
             case 't':
@@ -92,6 +112,8 @@ public class Lexer extends UnicodeTranslator {
                 break;
             default:
                 if (initialChar >= '0' && initialChar <= '7') { // octal escape (limited to \377)
+                    this.incrCursor();
+                    skipIncrement = true;
                     int codePoint = Character.digit(initialChar, 8);
                     char c3 = this.peek();
                     if (c3 >= '0' && c3 <= '7') {
@@ -106,57 +128,158 @@ public class Lexer extends UnicodeTranslator {
                     translatedChar = (char) codePoint;
                     break;
                 }
-                throw new IllegalStateException("Invalid char escape");
+                throw new LexerException("Invalid char escape (" + initialChar + ")", this);
+        }
+        if (!skipIncrement) {
+            this.incrCursor();
+        }
+        if (textBlock != null && isSpace(translatedChar)) { // special case for text block escaped space doesn't count as a blank line/indent
+            textBlock.notifySpaceEscapeAt(this.buffer.length());
         }
         this.buffer.append(translatedChar);
     }
 
-    // " " """ """
-    public void readString(boolean paragraph) {
-        boolean firstLine = true;
+    public class RelativeTextBlock {
+
+        record TextLine(String content, int effectiveSize, EscapeType escapeType) {
+
+            public void addTo(StringBuilder builder, int leadingIndent) {
+                if (this.effectiveSize > 0) {
+                    builder.append(this.content, leadingIndent, Math.max(this.effectiveSize, leadingIndent));
+                }
+            }
+
+            public String get(int leadingIndent) {
+                if (this.effectiveSize == 0) {
+                    return "";
+                }
+                return this.content.substring(leadingIndent, Math.max(this.effectiveSize, leadingIndent));
+            }
+        }
+
+        public enum EscapeType { // relative to a text line
+            SPACE,
+            NEW_LINE,
+            NONE
+        }
+
+        private final List<TextLine> lines = new ArrayList<>();
+
+        private EscapeType currentEscapeType = EscapeType.NONE;
+        private final Set<Integer> spaceEscapes = new HashSet<>();
+
+        private final StringBuilder longLine = new StringBuilder();
+
+        private Integer leadingIndent;
+
+        public void notifyEscape(EscapeType type) {
+            this.currentEscapeType = type;
+        }
+
+        public void notifySpaceEscapeAt(int pos) { // \s \t \f
+            this.spaceEscapes.add(pos);
+        }
+
+        public void add(String line) { // regular escape are already translated
+            int size = line.length();
+
+            // compute leading indent
+            int i;
+            for (i = 0; i < size && !this.spaceEscapes.contains(i) && Lexer.this.isSpace(line.charAt(i)); i++) {
+            }
+
+            if (i != size || this.currentEscapeType == EscapeType.NEW_LINE) {
+                // ignore blank line (since new line escape is cut before that make sure it's not considered as blank
+                // space escape are already not considered as blank with the spaceEscapes list)
+                if (this.leadingIndent == null) {
+                    this.leadingIndent = i;
+                } else {
+                    this.leadingIndent = Math.min(i, this.leadingIndent);
+                }
+            }
+
+            // compute trailing indent
+            int effectiveSize = size; // line size without trailing indent
+            if (this.currentEscapeType == EscapeType.NONE) {
+                for (i = size - 1; i >= 0 && !this.spaceEscapes.contains(i) && Lexer.this.isSpace(line.charAt(i)); i--) {
+                    effectiveSize--;
+                }
+            }
+
+            this.lines.add(new TextLine(line, effectiveSize, this.currentEscapeType));
+
+            this.currentEscapeType = EscapeType.NONE;
+            this.spaceEscapes.clear();
+        }
+
+        public void getIn(List<String> output) {
+            for (TextLine line : this.lines) {
+                if (line.escapeType() == EscapeType.NEW_LINE) {
+                    line.addTo(this.longLine, this.leadingIndent);
+                } else {
+                    if (this.longLine.isEmpty()) {
+                        output.add(line.get(this.leadingIndent));
+                    } else {
+                        line.addTo(this.longLine, this.leadingIndent);
+                        output.add(this.longLine.toString());
+                        this.longLine.delete(0, this.longLine.length());
+                    }
+                }
+            }
+        }
+    }
+
+    // " "
+    public void readString() {
         while (this.canRead()) {
             char c = this.peek();
-
-            if (paragraph) {
-                if (this.buffer.isEmpty()) {
-                    if (isSpace(c)) { // todo this doesn't keep initial indent after the base level (need somehow to track newline cursors)
-                        this.incrCursor();
-                        continue;
-                    }
-                }
-            } else {
-                if (isNewline(c)) {
-                    throw new LexerException("Illegal newline inside string literal after \"%s\"".formatted(this.buffer.toString()), this);
-                }
+            if (isLineTerm(c)) {
+                throw new LexerException("Illegal newline inside string literal after \"%s\"".formatted(this.buffer.toString()), this);
             }
 
-            final boolean reachEnd;
-            if (paragraph) {
-                reachEnd = match("\"\"\"");
-            } else {
-                reachEnd = match('"');
+            if (match('"')) {
+                break;
             }
 
-            if ((paragraph && isNewline(c)) || reachEnd) { // this logic is too convoluted split more block
-                if (paragraph) {
-                    String line = this.readBuffer();
-                    if (reachEnd || firstLine) { // ignore empty line for start and end
-                        firstLine = false;
-                        if (!line.isEmpty()) {
-                            this.lineBuffer.add(line);
-                        }
-                    } else {
-                        this.lineBuffer.add(line);
-                    }
-                }
+            this.incrCursor();
+            this.appendLiteral(c, null);
+        }
+    }
+
+    // """ """
+    public void readParagraph() {
+        // skip optional space between open delimiter and line terminator
+        while (this.canRead()) {
+            if (!isSpace(this.peek())) {
+                break;
+            }
+
+            this.incrCursor();
+        }
+
+        if (this.canRead() && isLineTerm(this.peek())) {
+            this.skipLineTerm();
+        } else {
+            throw new LexerException("Expect a new line after paragraph open delimiter", this);
+        }
+        this.textBlock = new RelativeTextBlock();
+
+        while (this.canRead()) {
+            char c = this.peek();
+            final boolean reachEnd = match("\"\"\"");
+            if (isLineTerm(c) || reachEnd) {
+                String line = this.readBuffer();
+                this.textBlock.add(line);
+
                 if (reachEnd) {
+                    this.textBlock.getIn(this.lineBuffer);
                     break;
                 }
                 // end of line
-                this.incrCursor();
-                this.visitLineTerminator();
+                this.skipLineTerm();
             } else {
-                this.appendLiteral(this.read());
+                this.incrCursor();
+                this.appendLiteral(c, this.textBlock);
             }
         }
     }
@@ -165,7 +288,7 @@ public class Lexer extends UnicodeTranslator {
     public void readSingleLineComment() {
         while (this.canRead()) {
             char c = this.peek();
-            if (isNewline(c)) {
+            if (isLineTerm(c)) {
                 break;
             }
 
@@ -197,11 +320,10 @@ public class Lexer extends UnicodeTranslator {
                 }
             }
 
-            if (isNewline(c)) {
+            if (isLineTerm(c)) {
                 String line = this.readBuffer();
                 this.lineBuffer.add(line);
-                this.incrCursor();
-                this.visitLineTerminator();
+                this.skipLineTerm();
                 expectPrefix = true;
                 continue;
             }
@@ -211,40 +333,67 @@ public class Lexer extends UnicodeTranslator {
         }
     }
 
-    /*(*)
-    (*)
+    /**
+     *
      */
-    public void readComment(boolean javadoc) {
+    public void readJavadoc() {
         boolean firstLine = true;
         while (this.canRead()) {
             if (match("*/")) {
                 String line = this.readBuffer();
-                if (!line.isEmpty()) { // ignore empty line at end
+                if (!isBlank(line)) { // ignore blank line at end
                     this.lineBuffer.add(line);
                 }
                 break;
             }
 
             char c = this.peek();
-            if (javadoc && this.buffer.isEmpty()) {
+            if (this.buffer.isEmpty()) {
                 if (isSpace(c) || c == '*') {
                     this.incrCursor();
                     continue;
                 }
             }
 
-            if (isNewline(c)) {
+            if (isLineTerm(c)) {
                 String line = this.readBuffer();
-                if (firstLine) {
-                    if (!line.isEmpty()) { // ignore empty line at start
-                        this.lineBuffer.add(line);
-                    }
-                    firstLine = false;
-                } else {
+                if (!firstLine || !isBlank(line)) { // ignore blank line at start
                     this.lineBuffer.add(line);
                 }
-                this.incrCursor();
-                this.visitLineTerminator();
+                firstLine = false;
+                this.skipLineTerm();
+                continue;
+            }
+
+            this.buffer.append(c);
+            this.incrCursor();
+        }
+    }
+
+    /*
+
+     */
+    public void readComment() {
+        this.textBlock = new RelativeTextBlock();
+        boolean firstLine = true;
+        while (this.canRead()) {
+            if (match("*/")) {
+                String line = this.readBuffer();
+                if (!isBlank(line)) { // ignore blank line at end
+                    this.textBlock.add(line);
+                }
+                this.textBlock.getIn(this.lineBuffer);
+                break;
+            }
+
+            char c = this.peek();
+            if (isLineTerm(c)) {
+                String line = this.readBuffer();
+                if (!firstLine || !isBlank(line)) { // ignore blank line at start
+                    this.textBlock.add(line);
+                }
+                firstLine = false;
+                this.skipLineTerm();
                 continue;
             }
 
@@ -267,8 +416,7 @@ public class Lexer extends UnicodeTranslator {
 
     public Token readToken() {
         TokenType type = null;
-        int startPos = 0;
-        int startColumn = 0;
+        TokenPosition tokenPos = TokenPosition.record(() -> this.cursor, this::getRow, this::getColumn);
     loop:
         while (this.canRead()) {
             char c = this.peek();
@@ -288,8 +436,7 @@ public class Lexer extends UnicodeTranslator {
                     this.visitLineTerminator();
                     break;
                 case '/':
-                    startPos = this.cursor;
-                    startColumn = this.getColumn();
+                    tokenPos.begin(true);
                     this.incrCursor();
                     if (match('/')) {
                         if (match('/')) {
@@ -309,109 +456,93 @@ public class Lexer extends UnicodeTranslator {
                                 // empty javadoc also seen as empty single line comment
                                 break loop;
                             }
+                            this.readJavadoc();
                         } else {
                             type = TokenType.COMMENT;
+                            this.readComment();
                         }
-                        this.readComment(type == TokenType.JAVADOC);
                         break loop;
                     }
                     break;
                 case '\'':
                     type = TokenType.CHAR;
-                    startPos = this.cursor;
-                    startColumn = this.getColumn();
+                    tokenPos.begin(true);
                     this.incrCursor();
-                    this.appendLiteral(this.read());
+                    this.appendLiteral(this.read(), null);
                     if (!match('\'')) {
                         throw new LexerException("Unbalanced quote for char literal " + this.buffer.toString(), this);
                     }
                     break loop;
                 case '"':
-                    startPos = this.cursor;
-                    startColumn = this.getColumn();
+                    tokenPos.begin(true);
                     this.incrCursor();
                     if (match("\"\"")) {
-                        if (!match("\r\n") && !match('\n') && !match('\r')) {
-                            throw new LexerException("Expect a new line after paragraph open delimiter", this);
-                        }
-
                         type = TokenType.PARAGRAPH;
+                        this.readParagraph();
                     } else {
                         type = TokenType.STRING;
+                        this.readString();
                     }
-                    this.readString(type == TokenType.PARAGRAPH);
                     break loop;
                 case '(':
                     type = TokenType.LPAREN;
-                    startPos = this.cursor;
-                    startColumn = this.getColumn();
+                    tokenPos.begin();
                     this.incrCursor();
                     break loop;
                 case ')':
                     type = TokenType.RPAREN;
-                    startPos = this.cursor;
-                    startColumn = this.getColumn();
+                    tokenPos.begin();
                     this.incrCursor();
                     break loop;
                 case '{':
                     type = TokenType.LSCOPE;
-                    startPos = this.cursor;
-                    startColumn = this.getColumn();
+                    tokenPos.begin();
                     this.incrCursor();
                     break loop;
                 case '}':
                     type = TokenType.RSCOPE;
-                    startPos = this.cursor;
-                    startColumn = this.getColumn();
+                    tokenPos.begin();
                     this.incrCursor();
                     break loop;
                 case '[':
                     type = TokenType.LBRACKET;
-                    startPos = this.cursor;
-                    startColumn = this.getColumn();
+                    tokenPos.begin();
                     this.incrCursor();
                     break loop;
                 case ']':
                     type = TokenType.RBRACKET;
-                    startPos = this.cursor;
-                    startColumn = this.getColumn();
+                    tokenPos.begin();
                     this.incrCursor();
                     break loop;
                 case '@':
                     type = TokenType.AT_SIGN;
-                    startPos = this.cursor;
-                    startColumn = this.getColumn();
+                    tokenPos.begin();
                     this.incrCursor();
                     break loop;
                 case '*':
                     type = TokenType.STAR;
-                    startPos = this.cursor;
-                    startColumn = this.getColumn();
+                    tokenPos.begin();
                     this.incrCursor();
                     break loop;
                 case '.':
                     type = TokenType.DOT;
-                    startPos = this.cursor;
-                    startColumn = this.getColumn();
+                    tokenPos.begin();
                     this.incrCursor();
                     break loop;
                 case ',':
                     type = TokenType.CO;
-                    startPos = this.cursor;
-                    startColumn = this.getColumn();
+                    tokenPos.begin();
                     this.incrCursor();
                     break loop;
                 case ';':
                     type = TokenType.SECO;
-                    startPos = this.cursor;
-                    startColumn = this.getColumn();
+                    tokenPos.begin();
                     this.incrCursor();
                     break loop;
                 default:
                     if (Character.isJavaIdentifierStart(this.peekPoint())) {
                         type = TokenType.IDENTIFIER;
-                        startPos = this.cursor;
-                        startColumn = this.getColumn();
+                        tokenPos.begin(true);
                         this.appendCodePoint();
                         this.incrCursor();
                         this.readIdentifier();
@@ -423,8 +554,7 @@ public class Lexer extends UnicodeTranslator {
         }
 
         if (!this.canRead()) {
-            startPos = this.cursor;
-            startColumn = this.getColumn();
+            tokenPos.begin();
             type = TokenType.EOI;
         }
 
@@ -432,19 +562,34 @@ public class Lexer extends UnicodeTranslator {
             throw new LexerException("Unknown token found", this);
         }
 
+        tokenPos.end();
+
         if (CharSequenceToken.TYPES.contains(type)) {
             String value = this.readBuffer();
             if (type == TokenType.IDENTIFIER) {
                 type = TokenType.fromName(value, type);
             }
-            return new CharSequenceToken(type, value, this.getRow(), startColumn, this.getColumn(), startPos, this.cursor);
+
+            TokenPosition.AbsolutePos startPos = tokenPos.startPos;
+            TokenPosition.AbsolutePos endPos = tokenPos.endPos;
+            return new CharSequenceToken(type, value, startPos.row(), startPos.column(), endPos.column(), startPos.cursor(), endPos.cursor());
         }
 
         if (CharSequenceBlockToken.TYPES.contains(type)) {
-            return new CharSequenceBlockToken(type, this.readLineBuffer(), this.getRow(), startColumn, startPos, this.cursor);
+            TokenPosition.AbsolutePos startPos = tokenPos.startPos;
+            TokenPosition.AbsolutePos endPos = tokenPos.endPos;
+            return new CharSequenceBlockToken(type, this.readLineBuffer(), startPos.row(), endPos.row(), startPos.column(), endPos.column(), startPos.cursor(), endPos.cursor());
         }
 
-        return new RawToken(type, this.getRow(), startColumn, startPos);
+        return new RawToken(type, tokenPos.startPos.row(), tokenPos.startPos.column(), tokenPos.startPos.cursor());
+    }
+
+    private boolean isBlank(String line) {
+        int i;
+        int size = line.length();
+        for (i = 0; i < size && isSpace(line.charAt(i)); i++) {
+        }
+        return i == size;
     }
 
     public static boolean isWhitespace(int codePoint) {

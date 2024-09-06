@@ -29,7 +29,7 @@ public class LexerTest extends ParserTest { // todo more test to cover import/an
             lexer -> {
                 Token importToken = lexer.readToken();
                 assertSame(TokenType.IMPORT, importToken.type());
-                assertSame(0, ((CharSequenceToken) importToken).startPos());
+                assertSame(0, importToken.pos());
                 assertSame(0 + TokenType.IMPORT.name.length(), ((CharSequenceToken) importToken).endPos());
 
                 assertNIdentifier(lexer, 4);
@@ -47,13 +47,13 @@ public class LexerTest extends ParserTest { // todo more test to cover import/an
             lexer -> {
                 Token importToken = lexer.readToken();
                 assertSame(TokenType.IMPORT, importToken.type());
-                assertSame(0, ((CharSequenceToken) importToken).startPos());
+                assertSame(0, importToken.pos());
                 assertSame(0 + TokenType.IMPORT.name.length(), ((CharSequenceToken) importToken).endPos());
 
                 int expectedStaticStartCursor = lexer.getCursor() + 1; // import token size + one space
                 Token staticToken = lexer.readToken();
                 assertSame(TokenType.STATIC, staticToken.type());
-                assertSame(expectedStaticStartCursor, ((CharSequenceToken) staticToken).startPos());
+                assertSame(expectedStaticStartCursor, staticToken.pos());
                 assertSame(expectedStaticStartCursor + TokenType.STATIC.name.length(), ((CharSequenceToken) staticToken).endPos());
 
                 assertNIdentifier(lexer, 4);
@@ -71,7 +71,7 @@ public class LexerTest extends ParserTest { // todo more test to cover import/an
             lexer -> {
                 Token importToken = lexer.readToken();
                 assertSame(TokenType.IMPORT, importToken.type());
-                assertSame(0, ((CharSequenceToken) importToken).startPos());
+                assertSame(0, importToken.pos());
                 assertSame(0 + TokenType.IMPORT.name.length(), ((CharSequenceToken) importToken).endPos());
 
                 assertNIdentifier(lexer, 3);
@@ -95,13 +95,13 @@ public class LexerTest extends ParserTest { // todo more test to cover import/an
             lexer -> {
                 Token importToken = lexer.readToken();
                 assertSame(TokenType.IMPORT, importToken.type());
-                assertSame(0, ((CharSequenceToken) importToken).startPos());
+                assertSame(0, importToken.pos());
                 assertSame(0 + TokenType.IMPORT.name.length(), ((CharSequenceToken) importToken).endPos());
 
                 int expectedStaticStartCursor = lexer.getCursor() + 1; // import token size + one space
                 Token staticToken = lexer.readToken();
                 assertSame(TokenType.STATIC, staticToken.type());
-                assertSame(expectedStaticStartCursor, ((CharSequenceToken) staticToken).startPos());
+                assertSame(expectedStaticStartCursor, staticToken.pos());
                 assertSame(expectedStaticStartCursor + TokenType.STATIC.name.length(), ((CharSequenceToken) staticToken).endPos());
 
                 assertNIdentifier(lexer, 3);

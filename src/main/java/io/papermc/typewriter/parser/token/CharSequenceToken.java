@@ -3,7 +3,7 @@ package io.papermc.typewriter.parser.token;
 import java.util.EnumSet;
 import java.util.Set;
 
-public record CharSequenceToken(TokenType type, String value, int row, int column, int endColumn, int startPos, int endPos) implements Token {
+public record CharSequenceToken(TokenType type, String value, int row, int column, int endColumn, int pos, int endPos) implements Token {
 
     public int length() {
         return this.endColumn - this.column;

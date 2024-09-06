@@ -14,18 +14,19 @@ public enum TokenType {
     CHAR("'"),
     STRING("\""),
     PARAGRAPH("\"\"\""),
-    // others
+    // punctuation marks
     LPAREN("("),
     RPAREN(")"),
     LSCOPE("{"),
     RSCOPE("}"),
     LBRACKET("["),
     RBRACKET("]"),
-    STAR("*"),
-    AT_SIGN("@"),
     DOT("."),
     SECO(";"),
     CO(","),
+    // others
+    STAR("*"),
+    AT_SIGN("@"),
     COMMENT(null),
     SINGLE_COMMENT(null),
     JAVADOC(null),
