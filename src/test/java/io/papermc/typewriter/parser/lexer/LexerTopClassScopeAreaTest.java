@@ -1,4 +1,4 @@
-package io.papermc.typewriter.parser;
+package io.papermc.typewriter.parser.lexer;
 
 import area.AnnotationClass;
 import area.AnnotationPresentClass;
@@ -12,8 +12,8 @@ import area.NewlineScopedClass;
 import area.SimpleTrapClass;
 import io.papermc.typewriter.ClassNamed;
 import io.papermc.typewriter.context.ImportTypeCollector;
+import io.papermc.typewriter.parser.ParserTest;
 import io.papermc.typewriter.parser.token.CharSequenceToken;
-import io.papermc.typewriter.parser.token.RawToken;
 import io.papermc.typewriter.parser.token.Token;
 import io.papermc.typewriter.parser.token.TokenType;
 import org.junit.jupiter.params.ParameterizedTest;
