@@ -30,6 +30,9 @@ public final class TokenPosition {
     }
 
     public void begin(boolean recordEnd) {
+        if (this.startPos != null) {
+            throw new UnsupportedOperationException("Cannot begin a token position twice");
+        }
         this.recordEnd = recordEnd;
         this.startPos = this.getCapture();
     }

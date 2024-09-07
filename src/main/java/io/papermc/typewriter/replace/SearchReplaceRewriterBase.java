@@ -135,7 +135,7 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
                             content.append('\n');
                         }
 
-                        foundRewriter.options.targetClass().ifPresentOrElse(importCollector::setAccessSource, () -> importCollector.setAccessSource(null)); // todo this could be handled by the lexer prolly just need to take care of local class
+                        foundRewriter.options.targetClass().ifPresentOrElse(importCollector::setAccessSource, () -> importCollector.setAccessSource(null));
                         foundRewriter.insert(new SearchMetadata(source, importCollector, indent, strippedContent.toString(), i), content);
                         strippedContent = null;
                     }

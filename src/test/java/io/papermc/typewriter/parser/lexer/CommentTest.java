@@ -32,6 +32,7 @@ public class CommentTest extends ParserTest {
     @Test
     public void testComment() {
         parseJava("""
+                /**/
                 /* my comment! */
                 /* my comment
                 ! */
@@ -43,37 +44,45 @@ public class CommentTest extends ParserTest {
             lexer -> {
                 {
                     Token commentToken = lexer.readToken();
+                    assertSame(TokenType.COMMENT, commentToken.type());
+                    assertSame(4, commentToken.column());
+                    assertSame(4 + 2 + 0 + 2, ((CharSequenceBlockToken) commentToken).endColumn());
+                    assertSame(((CharSequenceBlockToken) commentToken).endRow(), commentToken.row());
+                    assertSame(1, commentToken.row());
+                    assertEquals(List.of(), ((CharSequenceBlockToken) commentToken).value());
+                }
+                {
+                    Token commentToken = lexer.readToken();
                     String expectedValue = "my comment!";
                     assertSame(TokenType.COMMENT, commentToken.type());
                     assertSame(4, commentToken.column());
                     assertSame(4 + 2 + 1 + expectedValue.length() + 1 + 2, ((CharSequenceBlockToken) commentToken).endColumn());
                     assertSame(((CharSequenceBlockToken) commentToken).endRow(), commentToken.row());
-                    assertSame(1, commentToken.row());
+                    assertSame(2, commentToken.row());
                     assertEquals(List.of(expectedValue), ((CharSequenceBlockToken) commentToken).value());
                 }
                 {
                     Token commentToken = lexer.readToken();
                     assertSame(TokenType.COMMENT, commentToken.type());
                     assertSame(4, commentToken.column());
-                    assertSame(2, commentToken.row());
-                    assertSame(3, ((CharSequenceBlockToken) commentToken).endRow());
+                    assertSame(3, commentToken.row());
+                    assertSame(4, ((CharSequenceBlockToken) commentToken).endRow());
                     assertEquals(List.of("my comment", "   !"), ((CharSequenceBlockToken) commentToken).value());
                 }
                 {
                     Token commentToken = lexer.readToken();
                     assertSame(TokenType.COMMENT, commentToken.type());
                     assertSame(4, commentToken.column());
-                    assertSame(4, commentToken.row());
-                    assertSame(7, ((CharSequenceBlockToken) commentToken).endRow());
+                    assertSame(5, commentToken.row());
+                    assertSame(8, ((CharSequenceBlockToken) commentToken).endRow());
                     assertEquals(List.of("    my comment", "!"), ((CharSequenceBlockToken) commentToken).value());
                 }
             });
     }
 
     @Test
-    public void testJavadoc() { // todo move /**/ as an empty multi line comment
+    public void testJavadoc() {
         parseJava("""
-                /**/
                 /** my javadoc! */
                 /** my javadoc
                 ! */
@@ -89,45 +98,36 @@ public class CommentTest extends ParserTest {
             lexer -> {
                 {
                     Token javadocToken = lexer.readToken();
+                    String expectedValue = "my javadoc!";
                     assertSame(TokenType.JAVADOC, javadocToken.type());
                     assertSame(4, javadocToken.column());
-                    assertSame(4 + 2 + 0 + 2, ((CharSequenceBlockToken) javadocToken).endColumn());
+                    assertSame(4 + 3 + 1 + expectedValue.length() + 1 + 2, ((CharSequenceBlockToken) javadocToken).endColumn());
                     assertSame(((CharSequenceBlockToken) javadocToken).endRow(), javadocToken.row());
                     assertSame(1, javadocToken.row());
-                    assertEquals(List.of(), ((CharSequenceBlockToken) javadocToken).value());
-                }
-                {
-                    Token javadocToken = lexer.readToken();
-                    String expectedValue = "my javadoc! "; // todo trailing space should be trimmed
-                    assertSame(TokenType.JAVADOC, javadocToken.type());
-                    assertSame(4, javadocToken.column());
-                    assertSame(4 + 3 + 1 + expectedValue.length() + 2, ((CharSequenceBlockToken) javadocToken).endColumn());
-                    assertSame(((CharSequenceBlockToken) javadocToken).endRow(), javadocToken.row());
-                    assertSame(2, javadocToken.row());
                     assertEquals(List.of(expectedValue), ((CharSequenceBlockToken) javadocToken).value());
                 }
                 {
                     Token javadocToken = lexer.readToken();
                     assertSame(TokenType.JAVADOC, javadocToken.type());
                     assertSame(4, javadocToken.column());
-                    assertSame(3, javadocToken.row());
-                    assertSame(4, ((CharSequenceBlockToken) javadocToken).endRow());
-                    assertEquals(List.of("my javadoc", "! "), ((CharSequenceBlockToken) javadocToken).value());
-                }
-                {
-                    Token javadocToken = lexer.readToken();
-                    assertSame(TokenType.JAVADOC, javadocToken.type());
-                    assertSame(4, javadocToken.column());
-                    assertSame(5, javadocToken.row());
-                    assertSame(8, ((CharSequenceBlockToken) javadocToken).endRow());
+                    assertSame(2, javadocToken.row());
+                    assertSame(3, ((CharSequenceBlockToken) javadocToken).endRow());
                     assertEquals(List.of("my javadoc", "!"), ((CharSequenceBlockToken) javadocToken).value());
                 }
                 {
                     Token javadocToken = lexer.readToken();
                     assertSame(TokenType.JAVADOC, javadocToken.type());
                     assertSame(4, javadocToken.column());
-                    assertSame(9, javadocToken.row());
-                    assertSame(12, ((CharSequenceBlockToken) javadocToken).endRow());
+                    assertSame(4, javadocToken.row());
+                    assertSame(7, ((CharSequenceBlockToken) javadocToken).endRow());
+                    assertEquals(List.of("my javadoc", "!"), ((CharSequenceBlockToken) javadocToken).value());
+                }
+                {
+                    Token javadocToken = lexer.readToken();
+                    assertSame(TokenType.JAVADOC, javadocToken.type());
+                    assertSame(4, javadocToken.column());
+                    assertSame(8, javadocToken.row());
+                    assertSame(11, ((CharSequenceBlockToken) javadocToken).endRow());
                     assertEquals(List.of("my javadoc", "!"), ((CharSequenceBlockToken) javadocToken).value());
                 }
             });
@@ -146,33 +146,32 @@ public class CommentTest extends ParserTest {
             lexer -> {
                 {
                     Token javadocToken = lexer.readToken();
-                    String expectedValue = " my javadoc!";
+                    String expectedValue = "my javadoc!";
                     assertSame(TokenType.MARKDOWN_JAVADOC, javadocToken.type());
                     assertSame(4, javadocToken.column());
-                    assertSame(0, ((CharSequenceBlockToken) javadocToken).endColumn()); // todo shouldn't be zero 4 + 3 + 1 + expectedValue.length()
-                    // todo: assertSame(((CharSequenceBlockToken) javadocToken).endRow(), javadocToken.row());
+                    assertSame(4 + 3 + 1 + expectedValue.length(), ((CharSequenceBlockToken) javadocToken).endColumn());
+                    assertSame(((CharSequenceBlockToken) javadocToken).endRow(), javadocToken.row());
                     assertSame(1, javadocToken.row());
                     assertEquals(List.of(expectedValue), ((CharSequenceBlockToken) javadocToken).value());
                 }
                 {
                     Token javadocToken = lexer.readToken();
-                    String expectedValue = " my javadoc!  "; // todo trim
+                    String expectedValue = "my javadoc!";
                     assertSame(TokenType.MARKDOWN_JAVADOC, javadocToken.type());
                     assertSame(4, javadocToken.column());
-                    assertSame(0, ((CharSequenceBlockToken) javadocToken).endColumn()); // 4 + 3 + 1 + expectedValue.length()
-                    // assertSame(((CharSequenceBlockToken) javadocToken).endRow(), javadocToken.row());
+                    assertSame(4 + 3 + 1 + expectedValue.length() + 2, ((CharSequenceBlockToken) javadocToken).endColumn());
+                    assertSame(((CharSequenceBlockToken) javadocToken).endRow(), javadocToken.row());
                     assertSame(3, javadocToken.row());
                     assertEquals(List.of(expectedValue), ((CharSequenceBlockToken) javadocToken).value());
                 }
-                /* EOI eat the last token for mjd todo
                 {
                     Token javadocToken = lexer.readToken();
                     assertSame(TokenType.MARKDOWN_JAVADOC, javadocToken.type());
                     assertSame(4, javadocToken.column());
                     assertSame(5, javadocToken.row());
-                    //assertSame(6, ((CharSequenceBlockToken) javadocToken).endRow());
-                    assertEquals(List.of(" my javadoc", " !"), ((CharSequenceBlockToken) javadocToken).value());
-                }*/
+                    assertSame(6, ((CharSequenceBlockToken) javadocToken).endRow());
+                    assertEquals(List.of("my javadoc", "!"), ((CharSequenceBlockToken) javadocToken).value());
+                }
             });
     }
 }

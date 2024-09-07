@@ -302,17 +302,17 @@ public class Lexer extends UnicodeTranslator {
     /// markdown
     /// javadoc `sparkl`
     @ApiStatus.Experimental
-    public void readMarkdownJavadoc() { // JEP 467
+    public void readMarkdownJavadoc(TokenPosition tokenPos) { // JEP 467
         boolean expectPrefix = false; // first prefix is already checked before
         while (this.canRead()) {
             char c = this.peek();
             if (this.buffer.isEmpty()) {
-                if (expectPrefix) {
-                    if (isSpace(c)) { // trim leading space before prefix ///
-                        this.incrCursor();
-                        continue;
-                    }
+                if (isSpace(c)) { // trim leading space before content [space]///[space][content]
+                    this.incrCursor();
+                    continue;
+                }
 
+                if (expectPrefix) {
                     if (match("///")) {
                         expectPrefix = false;
                         continue;
@@ -324,7 +324,8 @@ public class Lexer extends UnicodeTranslator {
 
             if (isLineTerm(c)) {
                 String line = this.readBuffer();
-                this.lineBuffer.add(line);
+                this.lineBuffer.add(stripTrailingSpace(line));
+                tokenPos.end(); // the end is not clearly defined until the very end
                 this.skipLineTerm();
                 expectPrefix = true;
                 continue;
@@ -344,7 +345,7 @@ public class Lexer extends UnicodeTranslator {
             if (match("*/")) {
                 String line = this.readBuffer();
                 if (!isBlank(line)) { // ignore blank line at end
-                    this.lineBuffer.add(line);
+                    this.lineBuffer.add(stripTrailingSpace(line));
                 }
                 break;
             }
@@ -360,7 +361,7 @@ public class Lexer extends UnicodeTranslator {
             if (isLineTerm(c)) {
                 String line = this.readBuffer();
                 if (!firstLine || !isBlank(line)) { // ignore blank line at start
-                    this.lineBuffer.add(line);
+                    this.lineBuffer.add(stripTrailingSpace(line));
                 }
                 firstLine = false;
                 this.skipLineTerm();
@@ -443,7 +444,7 @@ public class Lexer extends UnicodeTranslator {
                     if (match('/')) {
                         if (match('/')) {
                             type = TokenType.MARKDOWN_JAVADOC;
-                            this.readMarkdownJavadoc();
+                            this.readMarkdownJavadoc(tokenPos);
                         } else {
                             type = TokenType.SINGLE_COMMENT;
                             this.readSingleLineComment();
@@ -453,11 +454,12 @@ public class Lexer extends UnicodeTranslator {
 
                     if (match('*')) {
                         if (match('*')) {
-                            type = TokenType.JAVADOC;
                             if (match('/')) {
-                                // empty javadoc also seen as empty single line comment
+                                // empty comment /**/ shouldn't be interpreted as javadoc
+                                type = TokenType.COMMENT;
                                 break loop;
                             }
+                            type = TokenType.JAVADOC;
                             this.readJavadoc();
                         } else {
                             type = TokenType.COMMENT;
@@ -555,7 +557,7 @@ public class Lexer extends UnicodeTranslator {
             }
         }
 
-        if (!this.canRead()) {
+        if (type == null && !this.canRead()) {
             tokenPos.begin();
             type = TokenType.EOI;
         }
@@ -564,7 +566,10 @@ public class Lexer extends UnicodeTranslator {
             throw new LexerException("Unknown token found", this);
         }
 
-        tokenPos.end();
+        if (type != TokenType.MARKDOWN_JAVADOC) {
+            // markdown javadoc are a bit special and doesn't have a clear delimiter
+            tokenPos.end();
+        }
 
         if (CharSequenceToken.TYPES.contains(type)) {
             String value = this.readBuffer();
@@ -592,6 +597,14 @@ public class Lexer extends UnicodeTranslator {
         for (i = 0; i < size && isSpace(line.charAt(i)); i++) {
         }
         return i == size;
+    }
+
+    private String stripTrailingSpace(String line) {
+        int i;
+        int size = line.length();
+        for (i = size - 1; i >= 0 && isSpace(line.charAt(i)); i--) {
+        }
+        return line.substring(0, i + 1);
     }
 
     public static boolean isWhitespace(int codePoint) {
