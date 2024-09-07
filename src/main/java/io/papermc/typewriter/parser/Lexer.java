@@ -64,7 +64,7 @@ public class Lexer extends UnicodeTranslator {
         }
     }
 
-    // handle all regular escape (except text block specific), unicode escape are done before and might form another regular escape after the first conversion
+    // handle all regular escape, unicode escape are done before and might form another regular escape after the first conversion
     public void appendLiteral(char c, @Nullable RelativeTextBlock textBlock) {
         if (c != '\\') {
             this.buffer.append(c);
@@ -99,7 +99,7 @@ public class Lexer extends UnicodeTranslator {
                 translatedChar = '\b';
                 break;
             case 's':
-                translatedChar = '\s';
+                translatedChar = ' ';
                 break;
             case '\\':
             case '"':
@@ -107,8 +107,10 @@ public class Lexer extends UnicodeTranslator {
                 translatedChar = initialChar;
                 break;
             case 'r':
+                translatedChar = '\r';
+                break;
             case 'n':
-                translatedChar = '\n'; // normalize
+                translatedChar = '\n';
                 break;
             default:
                 if (initialChar >= '0' && initialChar <= '7') { // octal escape (limited to \377)
