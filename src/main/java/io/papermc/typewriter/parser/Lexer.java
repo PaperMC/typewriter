@@ -606,16 +606,4 @@ public class Lexer extends UnicodeTranslator {
         }
         return line.substring(0, i + 1);
     }
-
-    public static boolean isWhitespace(int codePoint) {
-        if (!Character.isBmpCodePoint(codePoint)) {
-            return false; // just in case unicode is extended
-        }
-
-        return codePoint == ' ' ||
-            codePoint == '\t' ||
-            codePoint == '\f' ||
-            codePoint == '\n' ||
-            codePoint == '\r';
-    }
 }

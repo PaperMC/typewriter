@@ -1,7 +1,7 @@
 package io.papermc.typewriter.parser.name;
 
 
-public class ImportTypeName extends ProtoTypeName {
+public class ProtoImportTypeName extends ProtoTypeName {
 
     private boolean isStatic;
     private String staticMemberName;

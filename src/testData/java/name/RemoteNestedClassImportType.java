@@ -4,7 +4,7 @@ import name.one.OneDepthClass.NonStaticClass;
 import name.one.OneDepthClass;
 import static name.one.OneDepthClass.StaticClass;
 
-public class RemoteInnerClassImportType {
+public class RemoteNestedClassImportType {
     {
         var a = NonStaticClass.class;
         var b = NonStaticClass.Inner.class;

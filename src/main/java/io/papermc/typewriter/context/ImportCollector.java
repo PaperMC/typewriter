@@ -2,35 +2,9 @@ package io.papermc.typewriter.context;
 
 import io.papermc.typewriter.ClassNamed;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jetbrains.annotations.ApiStatus;
 
 public interface ImportCollector {
-
-    ImportCollector NO_OP = new ImportCollector() {
-        @Override
-        public void setAccessSource(@Nullable ClassNamed accessSource) {
-
-        }
-
-        @Override
-        public void addImport(String typeName) {
-
-        }
-
-        @Override
-        public void addStaticImport(String fullName) {
-
-        }
-
-        @Override
-        public String getStaticMemberShortName(String fullName) {
-            return fullName;
-        }
-
-        @Override
-        public String getShortName(ClassNamed type) {
-            return type.canonicalName();
-        }
-    };
 
     void setAccessSource(@Nullable ClassNamed accessSource);
 
@@ -38,12 +12,29 @@ public interface ImportCollector {
 
     void addStaticImport(String fullName);
 
+    boolean canImportSafely(ClassNamed type);
+
     String getStaticMemberShortName(String fullName);
 
     default String getShortName(Class<?> type) {
         return this.getShortName(new ClassNamed(type));
     }
 
-    String getShortName(ClassNamed type);
+    default String getShortName(ClassNamed type) {
+        return this.getShortName(type, true);
+    }
 
+    default String getShortName(Class<?> type, boolean autoImport) {
+        return this.getShortName(new ClassNamed(type), autoImport);
+    }
+
+    String getShortName(ClassNamed type, boolean autoImport);
+
+    @ApiStatus.Experimental
+    default String getShortestName(Class<?> type) {
+        return this.getShortestName(new ClassNamed(type));
+    }
+
+    @ApiStatus.Experimental
+    String getShortestName(ClassNamed type);
 }

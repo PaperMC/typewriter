@@ -1,0 +1,5 @@
+[*.java]
+ij_java_imports_layout = *, |, |, $*
+
+[Test{1,2}.java]
+ij_java_imports_layout = $*, |, java.**, |, *

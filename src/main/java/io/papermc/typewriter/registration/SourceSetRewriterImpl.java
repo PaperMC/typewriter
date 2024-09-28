@@ -1,5 +1,7 @@
 package io.papermc.typewriter.registration;
 
+import io.papermc.typewriter.FileMetadata;
+import io.papermc.typewriter.IndentUnit;
 import io.papermc.typewriter.SourceFile;
 import io.papermc.typewriter.SourceRewriter;
 
@@ -12,6 +14,15 @@ import java.util.Map;
 public class SourceSetRewriterImpl<T extends SourceSetRewriter<T>> implements SourceSetRewriter<T> {
 
     protected final Map<SourceFile, SourceRewriter> rewrites = new HashMap<>();
+    protected final FileMetadata fileMetadata;
+
+    public SourceSetRewriterImpl(FileMetadata fileMetadata) {
+        this.fileMetadata = fileMetadata;
+    }
+
+    public SourceSetRewriterImpl(IndentUnit indentUnit) {
+        this(FileMetadata.of(indentUnit));
+    }
 
     @Override
     public Map<SourceFile, SourceRewriter> getRewriters() {
@@ -29,7 +40,7 @@ public class SourceSetRewriterImpl<T extends SourceSetRewriter<T>> implements So
     @Override
     public void apply(Path output) throws IOException {
         for (Map.Entry<SourceFile, SourceRewriter> rewriter : this.rewrites.entrySet()) {
-            rewriter.getValue().writeToFile(output, rewriter.getKey());
+            rewriter.getValue().writeToFile(output, this.fileMetadata, rewriter.getKey());
         }
     }
 }

@@ -7,9 +7,9 @@ import io.papermc.typewriter.yaml.YamlMappingConverter;
 import name.GlobalImportType;
 import name.PackageClassImportType;
 import name.RegularImportType;
-import name.RemoteGlobalInnerClassImportType;
-import name.RemoteInnerClassImportType;
-import name.RemoteStaticGlobalInnerClassImportType;
+import name.RemoteGlobalNestedClassImportType;
+import name.RemoteNestedClassImportType;
+import name.RemoteGlobalStaticNestedClassImportType;
 import name.SelfInnerClass;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.converter.ConvertWith;
@@ -41,23 +41,19 @@ public class ShortNameTest extends ParserTest {
         );
     }
 
-    private static Stream<Arguments> fileProvider() {
+    private static Stream<Arguments> importTypeProvider() {
         return Stream.of(
             rootClass(RegularImportType.class),
             rootClass(GlobalImportType.class),
             rootClass(PackageClassImportType.class),
-            rootClass(RemoteGlobalInnerClassImportType.class),
-            rootClass(RemoteStaticGlobalInnerClassImportType.class),
-            rootClass(RemoteInnerClassImportType.class),
-            rootClass(SelfInnerClass.class),
-            innerClass(SelfInnerClass.class, SelfInnerClass.A.B.C.class),
-            innerClass(SelfInnerClass.class, SelfInnerClass.D.class),
-            innerClass(SelfInnerClass.class, SelfInnerClass.A.B.E.class)
+            rootClass(RemoteGlobalNestedClassImportType.class),
+            rootClass(RemoteGlobalStaticNestedClassImportType.class),
+            rootClass(RemoteNestedClassImportType.class)
         );
     }
 
     @ParameterizedTest
-    @MethodSource("fileProvider")
+    @MethodSource("importTypeProvider")
     public void testTypeName(Path path,
                              Class<?> sampleClass,
                              String name,
@@ -74,7 +70,7 @@ public class ShortNameTest extends ParserTest {
                 String typeName = expect.getKey();
                 Class<?> runtimeClass = classOr(expect.getKey(), null);
                 assertNotNull(runtimeClass, "Runtime class cannot be null for import " + typeName);
-                assertEquals(expect.getValue(), importCollector.getShortName(runtimeClass),
+                assertEquals(expect.getValue(), importCollector.getShortName(runtimeClass, false),
                     "Short name of " + typeName + " doesn't match with collected imports for " + name + "! Import found: " + importCollector.getImports());
             }
         }
@@ -85,6 +81,37 @@ public class ShortNameTest extends ParserTest {
                 assertEquals(expect.getValue(), importCollector.getStaticMemberShortName(fullName),
                     "Short name of static member/class " + fullName + " doesn't match with collected imports for " + name + "! Static imports found: " + importCollector.getStaticImports());
             }
+        }
+    }
+
+    public static Stream<Arguments> innerTypeProvider() {
+        return Stream.of(
+            rootClass(SelfInnerClass.class),
+            innerClass(SelfInnerClass.class, SelfInnerClass.A.B.C.class),
+            innerClass(SelfInnerClass.class, SelfInnerClass.D.class),
+            innerClass(SelfInnerClass.class, SelfInnerClass.A.B.E.class)
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("innerTypeProvider")
+    public void testInnerTypeName(Path path,
+                             Class<?> sampleClass,
+                             String name,
+                             @ConvertWith(ImportShortNameMappingConverter.class) ImportShortNameMapping mapping) throws IOException {
+        ClassNamed accessSource = new ClassNamed(sampleClass);
+        final ImportTypeCollector importCollector = new ImportTypeCollector(accessSource.topLevel());
+        importCollector.setAccessSource(accessSource);
+        parseFile(path, importCollector);
+
+        assertNotNull(mapping.getShortNames(), "Empty expected import mapping!");
+
+        for (Map.Entry<String, String> expect : mapping.getShortNames().entrySet()) {
+            String typeName = expect.getKey();
+            Class<?> runtimeClass = classOr(expect.getKey(), null);
+            assertNotNull(runtimeClass, "Runtime class cannot be null for import " + typeName);
+            assertEquals(expect.getValue(), importCollector.getShortestName(runtimeClass),
+                "Short name of " + typeName + " doesn't match with collected imports for " + name + "! Import found: " + importCollector.getImports());
         }
     }
 

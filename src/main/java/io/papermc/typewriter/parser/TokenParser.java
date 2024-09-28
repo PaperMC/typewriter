@@ -3,9 +3,10 @@ package io.papermc.typewriter.parser;
 import io.papermc.typewriter.context.ImportCollector;
 import io.papermc.typewriter.context.ImportTypeCollector;
 import io.papermc.typewriter.parser.exception.ParserException;
-import io.papermc.typewriter.parser.name.ImportTypeName;
+import io.papermc.typewriter.parser.name.ProtoImportTypeName;
 import io.papermc.typewriter.parser.token.CharSequenceToken;
 import io.papermc.typewriter.parser.token.Token;
+import io.papermc.typewriter.parser.token.TokenPosition;
 import io.papermc.typewriter.parser.token.TokenType;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import javax.lang.model.SourceVersion;
@@ -28,8 +29,8 @@ public class TokenParser {
         TokenType.MARKDOWN_JAVADOC
     );
 
-    private ImportTypeName readImport() {
-        ImportTypeName typeName = new ImportTypeName();
+    private ProtoImportTypeName readImport() {
+        ProtoImportTypeName typeName = new ProtoImportTypeName();
         boolean canReadId = true;
         while (this.lexer.canRead()) {
             Token token = this.lexer.readToken();
@@ -153,5 +154,37 @@ public class TokenParser {
             }
         }
         return null;
+    }
+
+    public TokenPosition trackImportPosition() {
+        TokenPosition tokenPos = TokenPosition.record(this.lexer::getCursor, () -> 0, () -> 0); // only care about cursor
+        boolean inImport = false;
+        boolean firstImport = true;
+        while (this.lexer.canRead()) {
+            Token token = this.lexer.readToken();
+            if (token.type() == TokenType.EOI || token.type() == TokenType.LSCOPE) {
+                break;
+            }
+
+            if (inImport) {
+                if (token.type() != TokenType.SECO) { // skip until semi colon
+                    continue;
+                }
+                inImport = false;
+                tokenPos.end(); // don't really know the end until lscope is parsed
+            }
+
+            if (token.type() == TokenType.IMPORT) {
+                if (firstImport) {
+                    token.pos();
+                    tokenPos.begin(true);
+                    firstImport = false;
+                }
+                inImport = true;
+            } else if (token.type() == TokenType.AT_SIGN) {
+                this.skipAnnotation();
+            }
+        }
+        return tokenPos;
     }
 }

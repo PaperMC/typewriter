@@ -1,0 +1,4 @@
+memberShortNames: {
+  "name.one.OneDepthClass.StaticClass": "StaticClass",
+  # "name.one.OneDepthClass.NonStaticClass": "name.one.OneDepthClass.NonStaticClass", (this one worked by accident before but need more context that is probably not worth)
+}

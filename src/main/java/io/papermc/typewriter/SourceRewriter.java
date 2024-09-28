@@ -22,14 +22,14 @@ public interface SourceRewriter {
      * @param file   the source file
      * @throws IOException if an I/O error occur
      */
-    default void writeToFile(Path parent, SourceFile file) throws IOException {
-        writeToFile(parent, parent, file);
+    default void writeToFile(Path parent, FileMetadata metadata, SourceFile file) throws IOException {
+        writeToFile(parent, parent, metadata, file);
     }
 
     /**
-     * Only used by Paper for new rewriter use {@link #writeToFile(Path, SourceFile)}
+     * Only used by Paper for new rewriter use {@link #writeToFile(Path, FileMetadata, SourceFile)}
      */
     @Deprecated
     // used only for paper test
-    void writeToFile(Path readFolder, Path writeFolder, SourceFile file) throws IOException;
+    void writeToFile(Path readFolder, Path writeFolder, FileMetadata metadata, SourceFile file) throws IOException;
 }

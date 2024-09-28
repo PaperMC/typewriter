@@ -1,6 +1,5 @@
 package io.papermc.typewriter.parser.token;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
 import org.jetbrains.annotations.ApiStatus;
 
 public enum TokenType {
@@ -35,8 +34,8 @@ public enum TokenType {
     IDENTIFIER(null),
     EOI(null);
 
-    public final @Nullable String name;
-    TokenType(@Nullable String name) {
+    public final String name;
+    TokenType(String name) {
         this.name = name;
     }
 

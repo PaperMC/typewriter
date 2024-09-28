@@ -10,6 +10,6 @@ public abstract class SwitchRewriter extends SearchReplaceRewriter {
 
     @Override
     protected void insert(SearchMetadata metadata, StringBuilder builder) {
-        this.getContent().emitCode(metadata.indent(), metadata.source().indentUnit(), builder);
+        this.getContent().emitCode(metadata.indent(), this.indentUnit(), builder);
     }
 }

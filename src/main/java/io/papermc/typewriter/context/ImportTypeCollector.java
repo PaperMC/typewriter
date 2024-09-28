@@ -2,13 +2,17 @@ package io.papermc.typewriter.context;
 
 import com.google.common.base.Preconditions;
 import io.papermc.typewriter.ClassNamed;
-import io.papermc.typewriter.parser.name.ImportTypeName;
+import io.papermc.typewriter.ImportLayout;
+import io.papermc.typewriter.parser.name.ProtoImportTypeName;
 import io.papermc.typewriter.parser.token.TokenType;
 import org.jetbrains.annotations.VisibleForTesting;
 
 import java.lang.reflect.Modifier;
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -20,14 +24,17 @@ public class ImportTypeCollector implements ImportCollector {
 
     private final Map<ClassNamed, String> typeCache = new HashMap<>();
 
-    private final Set<String> imports = new HashSet<>();
-    private final Set<String> globalImports = new HashSet<>();
+    private final Set<String> imports = new LinkedHashSet<>();
+    private final Set<String> globalImports = new LinkedHashSet<>();
 
-    private final Map<String, String> staticImports = new HashMap<>(); // <fqn.id:id>
-    private final Set<String> globalStaticImports = new HashSet<>();
+    private final Map<String, String> staticImports = new LinkedHashMap<>(); // <fqn.id:id>
+    private final Set<String> globalStaticImports = new LinkedHashSet<>();
+
+    private final Set<ImportTypeName> addedImports = new LinkedHashSet<>();
 
     private final ClassNamed mainClass;
     private ClassNamed accessSource;
+    private boolean modified;
 
     public ImportTypeCollector(ClassNamed mainClass) {
         this.mainClass = mainClass;
@@ -42,23 +49,49 @@ public class ImportTypeCollector implements ImportCollector {
 
     @Override
     public void addImport(String typeName) {
-        if (typeName.endsWith(IMPORT_ON_DEMAND_MARKER)) {
-            this.globalImports.add(typeName.substring(0, typeName.lastIndexOf(ImportTypeName.IDENTIFIER_SEPARATOR)));
+        final boolean changed;
+        final String formattedName;
+        boolean isGlobal = typeName.endsWith(IMPORT_ON_DEMAND_MARKER);
+
+        if (isGlobal) {
+            formattedName = typeName.substring(0, typeName.lastIndexOf(ProtoImportTypeName.IDENTIFIER_SEPARATOR));
+            changed = this.globalImports.add(formattedName);
         } else {
-            this.imports.add(typeName);
+            formattedName = typeName;
+            changed = this.imports.add(typeName);
+        }
+
+        if (changed) {
+            this.addedImports.add(new ImportTypeName(formattedName, isGlobal, false, true));
+            if (!this.modified) {
+                this.modified = true;
+            }
         }
     }
 
     @Override
     public void addStaticImport(String fullName) {
-        if (fullName.endsWith(IMPORT_ON_DEMAND_MARKER)) {
-            this.globalStaticImports.add(fullName.substring(0, fullName.lastIndexOf(ImportTypeName.IDENTIFIER_SEPARATOR)));
+        final boolean changed;
+        final String formattedName;
+        boolean isGlobal = fullName.endsWith(IMPORT_ON_DEMAND_MARKER);
+
+        if (isGlobal) {
+            formattedName = fullName.substring(0, fullName.lastIndexOf(ProtoImportTypeName.IDENTIFIER_SEPARATOR));
+            changed = this.globalStaticImports.add(formattedName);
         } else {
-            this.staticImports.put(fullName, fullName.substring(fullName.lastIndexOf(ImportTypeName.IDENTIFIER_SEPARATOR) + 1));
+            formattedName = fullName;
+            changed = this.staticImports.put(formattedName, fullName.substring(fullName.lastIndexOf(ProtoImportTypeName.IDENTIFIER_SEPARATOR) + 1)) == null;
+        }
+
+        if (changed) {
+            this.addedImports.add(new ImportTypeName(formattedName, isGlobal, true, true));
+            if (!this.modified) {
+                this.modified = true;
+            }
         }
     }
 
-    public void addProtoImport(ImportTypeName typeName) {
+    public void addProtoImport(ProtoImportTypeName typeName) {
         // assume type name is valid (checkIntegrity + read time check)
         if (!typeName.isStatic()) {
             Set<String> imports = typeName.isGlobal() ? this.globalImports : this.imports;
@@ -70,6 +103,27 @@ public class ImportTypeCollector implements ImportCollector {
                 this.staticImports.put(typeName.getTypeName(), typeName.getStaticMemberName());
             }
         }
+        this.addedImports.add(new ImportTypeName(typeName.getTypeName(), typeName.isGlobal(), typeName.isStatic(), false));
+    }
+
+    // only check conflict, duplicate imports (with import on demand type) are not checked but the file should compile
+    @Override
+    public boolean canImportSafely(ClassNamed type) {
+        for (String importType : this.imports) {
+            String identifier = importType.substring(importType.lastIndexOf(ProtoImportTypeName.IDENTIFIER_SEPARATOR) + 1);
+            if (type.simpleName().equals(identifier)) {
+                return false;
+            }
+        }
+
+        // while this is not always required it ensure clarity of the source file
+        for (String identifier : this.staticImports.values()) {
+            if (type.simpleName().equals(identifier)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     @Override
@@ -79,7 +133,7 @@ public class ImportTypeCollector implements ImportCollector {
         }
 
         // global imports
-        int lastDotIndex = fullName.lastIndexOf(ImportTypeName.IDENTIFIER_SEPARATOR);
+        int lastDotIndex = fullName.lastIndexOf(ProtoImportTypeName.IDENTIFIER_SEPARATOR);
         if (lastDotIndex == -1) {
             return fullName;
         }
@@ -123,22 +177,12 @@ public class ImportTypeCollector implements ImportCollector {
     }
 
     @Override
-    public String getShortName(ClassNamed type) {
+    public String getShortName(ClassNamed type, boolean autoImport) {
         return this.typeCache.computeIfAbsent(type, key -> {
             Optional<String> shortName = getShortName0(key, this.imports, this.globalImports, false); // regular import
             if (shortName.isEmpty() && key.knownClass() != null && Modifier.isStatic(key.knownClass().getModifiers())) {
                 // this is only supported when the class is known for now but generally static imports should stick to member of class not the class itself
                 shortName = getShortName0(key, this.staticImports.keySet(), this.globalStaticImports, true);
-            }
-
-            // self classes (with inner classes)
-            if (this.mainClass.equals(key.topLevel())) {
-                int importedSize = shortName.map(String::length).orElse(0);
-                String innerName = getInnerShortName(this.accessSource, key);
-                if (importedSize == 0 || innerName.length() < importedSize) {
-                    // inner name might be shorter than self import
-                    return innerName;
-                }
             }
 
             return shortName.orElseGet(() -> {
@@ -148,12 +192,50 @@ public class ImportTypeCollector implements ImportCollector {
                 ) {
                     return key.dottedNestedName();
                 }
+
+                if (autoImport) {
+                    ClassNamed topType = type.topLevel();
+                    if (this.canImportSafely(topType)) {
+                        this.addImport(topType.canonicalName()); // only import top level, nested class are rarely imported directly
+                        return type.dottedNestedName();
+                    }
+                }
+
                 return key.canonicalName();
             });
         });
     }
 
-    public String getInnerShortName(ClassNamed fromType, ClassNamed targetType) {
+    @Override
+    public String getShortestName(ClassNamed type) { // experimental don't cache this one
+        Optional<String> shortName = getShortName0(type, this.imports, this.globalImports, false); // regular import
+        if (shortName.isEmpty() && type.knownClass() != null && Modifier.isStatic(type.knownClass().getModifiers())) {
+            // this is only supported when the class is known for now but generally static imports should stick to member of class not the class itself
+            shortName = getShortName0(type, this.staticImports.keySet(), this.globalStaticImports, true);
+        }
+
+        // self classes (with inner classes)
+        if (this.mainClass.equals(type.topLevel())) {
+            int importedSize = shortName.map(String::length).orElse(0);
+            String innerName = getInnerShortName(this.accessSource, type);
+            if (importedSize == 0 || innerName.length() < importedSize) {
+                // inner name might be shorter than self import
+                return innerName;
+            }
+        }
+
+        return shortName.orElseGet(() -> {
+            // import have priority over those implicit things
+            if (type.packageName().equals(JAVA_LANG_PACKAGE) || // auto-import
+                type.packageName().equals(this.mainClass.packageName()) // same package don't need fqn too
+            ) {
+                return type.dottedNestedName();
+            }
+            return type.canonicalName();
+        });
+    }
+
+    private String getInnerShortName(ClassNamed fromType, ClassNamed targetType) {
         int targetSize = targetType.dottedNestedName().length();
         int fromSize = fromType.dottedNestedName().length();
 
@@ -165,11 +247,22 @@ public class ImportTypeCollector implements ImportCollector {
             }
         }
 
-        if (targetSize > fromSize && targetType.dottedNestedName().charAt(startOffset) == ImportTypeName.IDENTIFIER_SEPARATOR) {
+        if (targetSize > fromSize && targetType.dottedNestedName().charAt(startOffset) == ProtoImportTypeName.IDENTIFIER_SEPARATOR) {
             startOffset++;
         }
 
         return targetType.dottedNestedName().substring(startOffset);
+    }
+
+    public String writeImports(ImportLayout.Section layout) {
+        StringBuilder builder = new StringBuilder();
+        List<ImportTypeName> addedImports = new ArrayList<>(this.addedImports);
+        layout.sortImportsInto(builder, addedImports);
+        return builder.toString();
+    }
+
+    public boolean isModified() {
+        return this.modified;
     }
 
     @VisibleForTesting

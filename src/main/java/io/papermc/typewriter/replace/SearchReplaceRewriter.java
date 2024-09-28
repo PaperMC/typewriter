@@ -1,6 +1,9 @@
 package io.papermc.typewriter.replace;
 
 import com.google.common.base.Preconditions;
+import io.papermc.typewriter.utils.ClassNamedView;
+import io.papermc.typewriter.FileMetadata;
+import io.papermc.typewriter.IndentUnit;
 import io.papermc.typewriter.SourceFile;
 import io.papermc.typewriter.context.ImportCollector;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
@@ -25,8 +28,17 @@ public class SearchReplaceRewriter extends SearchReplaceRewriterBase {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SearchReplaceRewriter.class);
 
+    protected @MonotonicNonNull SourceFile source;
+    protected @MonotonicNonNull FileMetadata fileMetadata;
+    protected @MonotonicNonNull ClassNamedView classNamedView;
+    protected @MonotonicNonNull ImportCollector importCollector;
+
     protected @MonotonicNonNull String name;
     protected @MonotonicNonNull ReplaceOptions options;
+
+    public IndentUnit indentUnit() {
+        return this.source.indentUnit().orElse(this.fileMetadata.indentUnit());
+    }
 
     @Contract(value = "_ -> this", mutates = "this")
     public SearchReplaceRewriter withOptions(ReplaceOptionsLike options) {
@@ -81,7 +93,7 @@ public class SearchReplaceRewriter extends SearchReplaceRewriterBase {
         return true;
     }
 
-    public void dump(SourceFile file, StringBuilder content) {
+    public void dump(StringBuilder content) {
         content.append("Name : ").append(this.name);
 
         content.append('\n');
@@ -97,7 +109,7 @@ public class SearchReplaceRewriter extends SearchReplaceRewriterBase {
             content.append(">".repeat(30));
             content.append('\n');
 
-            this.insert(new SearchMetadata(file, ImportCollector.NO_OP, file.indentUnit().content(), "", -1), content);
+            this.insert(new SearchMetadata(this.indentUnit().content(), "", -1), content);
 
             content.append("<".repeat(30));
         }

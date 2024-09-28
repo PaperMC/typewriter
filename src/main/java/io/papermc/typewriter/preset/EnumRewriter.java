@@ -27,8 +27,8 @@ public abstract class EnumRewriter<T> extends SearchReplaceRewriter {
 
     protected abstract EnumValue.Builder rewriteEnumValue(T item);
 
-    protected void appendEnumValue(T item, StringBuilder builder, SearchMetadata metadata, boolean reachEnd) {
-        this.rewriteEnumValue(item).build().emitCode(metadata.indent(), metadata.source().indentUnit(), builder);
+    protected void appendEnumValue(T item, StringBuilder builder, String indent, boolean reachEnd) {
+        this.rewriteEnumValue(item).build().emitCode(indent, this.indentUnit(), builder);
         if (reachEnd && !this.values.hasNext()) {
             builder.append(';');
         } else {
@@ -54,7 +54,7 @@ public abstract class EnumRewriter<T> extends SearchReplaceRewriter {
     @Override
     protected void replaceLine(SearchMetadata metadata, StringBuilder builder) {
         Preconditions.checkState(this.values.hasNext(), "Enum size doesn't match between generated values and replaced values.");
-        appendEnumValue(this.values.next(), builder, metadata, this.canReachEnd(metadata));
+        appendEnumValue(this.values.next(), builder, metadata.indent(), this.canReachEnd(metadata));
     }
 
     @Override
@@ -62,7 +62,7 @@ public abstract class EnumRewriter<T> extends SearchReplaceRewriter {
         boolean reachEnd = this.canReachEnd(metadata);
 
         while (this.values.hasNext()) {
-            appendEnumValue(this.values.next(), builder, metadata, reachEnd);
+            appendEnumValue(this.values.next(), builder, metadata.indent(), reachEnd);
         }
     }
 }
