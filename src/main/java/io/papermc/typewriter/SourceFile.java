@@ -6,8 +6,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.framework.qual.DefaultQualifier;
 import org.jetbrains.annotations.Contract;
 
-import javax.swing.text.html.Option;
-
 import java.nio.file.Path;
 import java.util.Iterator;
 import java.util.Optional;
@@ -56,11 +54,14 @@ public record SourceFile(ClassNamed mainClass, Path path, Optional<IndentUnit> i
         Preconditions.checkArgument(path.getNameCount() > 0, "Path %s cannot be a root element", path);
 
         StringBuilder packageName = new StringBuilder();
-        Iterator<Path> parts = path.getParent().iterator();
-        while (parts.hasNext()) {
-            packageName.append(parts.next().toString());
-            if (parts.hasNext()) {
-                packageName.append('.');
+        Path parent = path.getParent();
+        if (parent != null) {
+            Iterator<Path> parts = parent.iterator();
+            while (parts.hasNext()) {
+                packageName.append(parts.next().toString());
+                if (parts.hasNext()) {
+                    packageName.append('.');
+                }
             }
         }
 

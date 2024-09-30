@@ -32,7 +32,7 @@ public class ImportLayout {
      * The default format as defined above in {@link ImportLayout}
      */
     public static final ImportLayout DEFAULT = ImportLayout.builder()
-        .addSection("**/*.java", Section.DEFAULT)
+        .addSection("*.java", Section.DEFAULT)
         .build();
 
     private final Map<LazyBaseNameGlob, Section> sections;
@@ -127,7 +127,7 @@ public class ImportLayout {
          * for a {@link PathMatcher}. In a {@code .editorconfig} this method is the equivalent of
          * <pre>
          * [glob]
-         * ij_java_imports_layout = [section layout]
+         * ij_java_imports_layout = [layout]
          * </pre>
          *
          * @param glob the glob pattern
@@ -196,7 +196,7 @@ public class ImportLayout {
             types.stream().filter(matcher).sorted(this.order.comparator).forEach(type -> writeImport(builder, type));
         }
 
-        // todo support the whole format?
+        // todo support the whole format? and generalize .editorconfig handling for indent unit
         private void translateSymbol(String symbol, StringBuilder builder, List<ImportTypeName> types) {
             if (SPECIAL_LAYOUT_DATA.containsKey(symbol)) {
                 this.sort(SPECIAL_LAYOUT_DATA.get(symbol), builder, types);

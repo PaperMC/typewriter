@@ -55,7 +55,7 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
                 throw ex.withAdditionalContext(file);
             }
 
-            this.setup(file, fileMetadata, new ClassNamedView(parent, 20), collector);
+            this.setup(file, fileMetadata, new ClassNamedView(parent, 20, null), collector);
 
             try (BufferedReader reader = new BufferedReader(new CharArrayReader(lex.toCharArray()))) {
                 searchAndReplace(file, fileMetadata, reader, collector, content);
@@ -116,7 +116,7 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
         return importCollector;
     }
 
-    private void searchAndReplace(SourceFile source, FileMetadata fileMetadata, BufferedReader reader, ImportCollector importCollector, StringBuilder content) throws IOException {
+    private void searchAndReplace(SourceFile file, FileMetadata fileMetadata, BufferedReader reader, ImportCollector importCollector, StringBuilder content) throws IOException {
         Set<SearchReplaceRewriter> rewriters = this.getRewriters();
         Preconditions.checkState(!rewriters.isEmpty());
 
@@ -124,6 +124,7 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
         Set<SearchReplaceRewriter> unusedRewriters = new HashSet<>(rewriters);
         @Nullable StringBuilder strippedContent = null;
 
+        IndentUnit indentUnit = file.indentUnit().orElse(fileMetadata.indentUnit());
         @Nullable String indent = null;
         @Nullable SearchReplaceRewriter foundRewriter = null;
 
@@ -140,7 +141,7 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
                 marker = searchMarker(
                     lineIterator,
                     foundRewriter == null ? null : indent,
-                    fileMetadata.indentUnit(),
+                    indentUnit,
                     remainingRewriters,
                     foundRewriter == null
                 );
@@ -149,7 +150,7 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
             if (marker != EMPTY_MARKER) {
                 if (foundRewriter != null) {
                     if (!marker.owner().equals(foundRewriter)) {
-                        throw new IllegalStateException("Generated end comment doesn't match for rewriter " + foundRewriter.getName() + " in " + source.mainClass().canonicalName() + " at line " + (i + 1));
+                        throw new IllegalStateException("Generated end comment doesn't match for rewriter " + foundRewriter.getName() + " in " + file.mainClass().canonicalName() + " at line " + (i + 1));
                     }
 
                     if (!foundRewriter.options.exactReplacement()) {
@@ -169,8 +170,8 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
                     unusedRewriters.remove(foundRewriter);
                     foundRewriter = null;
                 } else {
-                    if (marker.indentSize() % fileMetadata.indentUnit().size() != 0) {
-                        throw new IllegalStateException("Generated start comment is not properly indented at line " + (i + 1) + " for rewriter " + marker.owner().getName() + " in " + source.mainClass().canonicalName());
+                    if (marker.indentSize() % indentUnit.size() != 0) {
+                        throw new IllegalStateException("Generated start comment is not properly indented at line " + (i + 1) + " for rewriter " + marker.owner().getName() + " in " + file.mainClass().canonicalName());
                     }
                     indent = " ".repeat(marker.indentSize()); // update indent based on the comments for flexibility
 
@@ -202,7 +203,7 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
         }
 
         if (foundRewriter != null) {
-            throw new IllegalStateException("Generated end comment is missing for rewriter " + foundRewriter.getName() + " in " + source.mainClass().canonicalName());
+            throw new IllegalStateException("Generated end comment is missing for rewriter " + foundRewriter.getName() + " in " + file.mainClass().canonicalName());
         }
 
         if (!unusedRewriters.isEmpty()) {

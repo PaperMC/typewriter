@@ -1,19 +1,19 @@
 package io.papermc.typewriter.utils;
 
+import com.google.common.base.Preconditions;
 import io.papermc.typewriter.ClassNamed;
 import io.papermc.typewriter.SourceFile;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.PathMatcher;
 import java.util.stream.Stream;
 
 /**
- * A class named view search through a specified path a
+ * A class named view search through a specified source set path a
  * java source file and convert it to {@link ClassNamed} if possible.
  * <br>
  * Do note that the class is not known at runtime though.
@@ -25,11 +25,26 @@ public class ClassNamedView {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ClassNamedView.class);
     private final Path base;
+    private final Path sourceSet;
     private final int maxDepth;
 
-    public ClassNamedView(Path base, int maxDepth) {
-        this.base = base;
+    public ClassNamedView(Path sourceSet, int maxDepth, @Nullable String base) {
+        Preconditions.checkArgument(Files.isDirectory(sourceSet), "Source set path must point to a directory");
+        this.sourceSet = sourceSet;
         this.maxDepth = maxDepth;
+        this.base = base == null ? sourceSet : sourceSet.resolve(base);
+    }
+
+    private ClassNamedView(Path sourceSet, int maxDepth, Path base) {
+        this.sourceSet = sourceSet;
+        this.maxDepth = maxDepth;
+        this.base = base;
+    }
+
+    public ClassNamedView subView(String relativePath) {
+        Path newBase = this.base.resolve(relativePath);
+        int deltaDepth = newBase.getNameCount() - this.base.getNameCount();
+        return new ClassNamedView(this.sourceSet, this.maxDepth - deltaDepth, newBase);
     }
 
     public ClassNamed findFirst(String name) {
@@ -53,10 +68,9 @@ public class ClassNamedView {
     }
 
     public Stream<SourceFile> findFile(String name) {
-        PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:**/" + name + ".java");
         try {
-            return Files.find(this.base, this.maxDepth, (path, attributes) -> matcher.matches(path))
-                .map(finalPath -> SourceFile.of(this.base.relativize(finalPath)));
+            return Files.find(this.base, this.maxDepth, (path, attributes) -> attributes.isRegularFile() && path.endsWith(name + ".java"))
+                .map(finalPath -> SourceFile.of(this.sourceSet.relativize(finalPath)));
         } catch (IOException ex) {
             LOGGER.warn("I/O error occurred while trying to find a valid class name for {}", name, ex);
             throw new RuntimeException(ex);
