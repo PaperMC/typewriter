@@ -1,6 +1,7 @@
 package io.papermc.typewriter;
 
 import com.google.common.base.Preconditions;
+import io.papermc.typewriter.parser.name.ProtoImportTypeName;
 import io.papermc.typewriter.utils.ClassHelper;
 import javax.lang.model.SourceVersion;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -117,6 +118,31 @@ public record ClassNamed(String packageName, String simpleName, String dottedNes
             return new ClassNamed(this.packageName, simpleName, name, null);
         }
         return null;
+    }
+
+    public String relativize(ClassNamed otherType) {
+        Preconditions.checkArgument(otherType.topLevel().equals(this.topLevel()), "Target class '%s' must be a nested class of %s", otherType.canonicalName(), this.canonicalName());
+        int otherSize = otherType.dottedNestedName().length();
+        int size = this.dottedNestedName().length();
+
+        int maxOffset = Math.min(otherSize, size);
+        int startOffset;
+        for (startOffset = 0; startOffset < maxOffset; startOffset++) {
+            if (this.dottedNestedName().charAt(startOffset) != otherType.dottedNestedName().charAt(startOffset)) {
+                break;
+            }
+        }
+
+        if (startOffset == otherSize) {
+            // parent reference in nested class is always the shortest qualified name
+            return otherType.simpleName();
+        }
+
+        if (otherType.dottedNestedName().charAt(startOffset) == ProtoImportTypeName.IDENTIFIER_SEPARATOR) {
+            startOffset++;
+        }
+
+        return otherType.dottedNestedName().substring(startOffset);
     }
 
     public String canonicalName() {

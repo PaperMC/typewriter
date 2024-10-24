@@ -2,7 +2,7 @@ package io.papermc.typewriter.yaml;
 
 import java.util.Map;
 
-public class ImportShortNameMapping {
+public class ShortNameMapping {
 
     public Map<String, String> shortNames;
     public Map<String, String> memberShortNames;

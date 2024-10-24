@@ -206,54 +206,6 @@ public class ImportTypeCollector implements ImportCollector {
         });
     }
 
-    @Override
-    public String getShortestName(ClassNamed type) { // experimental don't cache this one
-        Optional<String> shortName = getShortName0(type, this.imports, this.globalImports, false); // regular import
-        if (shortName.isEmpty() && type.knownClass() != null && Modifier.isStatic(type.knownClass().getModifiers())) {
-            // this is only supported when the class is known for now but generally static imports should stick to member of class not the class itself
-            shortName = getShortName0(type, this.staticImports.keySet(), this.globalStaticImports, true);
-        }
-
-        // self classes (with inner classes)
-        if (this.mainClass.equals(type.topLevel())) {
-            int importedSize = shortName.map(String::length).orElse(0);
-            String innerName = getInnerShortName(this.accessSource, type);
-            if (importedSize == 0 || innerName.length() < importedSize) {
-                // inner name might be shorter than self import
-                return innerName;
-            }
-        }
-
-        return shortName.orElseGet(() -> {
-            // import have priority over those implicit things
-            if (type.packageName().equals(JAVA_LANG_PACKAGE) || // auto-import
-                type.packageName().equals(this.mainClass.packageName()) // same package don't need fqn too
-            ) {
-                return type.dottedNestedName();
-            }
-            return type.canonicalName();
-        });
-    }
-
-    private String getInnerShortName(ClassNamed fromType, ClassNamed targetType) {
-        int targetSize = targetType.dottedNestedName().length();
-        int fromSize = fromType.dottedNestedName().length();
-
-        int maxOffset = Math.min(fromSize, targetSize - 1);
-        int startOffset;
-        for (startOffset = 0; startOffset < maxOffset; startOffset++) {
-            if (fromType.dottedNestedName().charAt(startOffset) != targetType.dottedNestedName().charAt(startOffset)) {
-                break;
-            }
-        }
-
-        if (targetSize > fromSize && targetType.dottedNestedName().charAt(startOffset) == ProtoImportTypeName.IDENTIFIER_SEPARATOR) {
-            startOffset++;
-        }
-
-        return targetType.dottedNestedName().substring(startOffset);
-    }
-
     public String writeImports(ImportLayout.Section layout) {
         StringBuilder builder = new StringBuilder();
         List<ImportTypeName> addedImports = new ArrayList<>(this.addedImports);

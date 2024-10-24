@@ -67,6 +67,7 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
             }
         } else {
             LOGGER.warn("Target source file '{}' doesn't exists, dumping rewriters data instead...", filePath);
+            this.setup(file, fileMetadata, new ClassNamedView(parent, 20, null), ImportCollector.NO_OP);
             dumpAll(file, fileMetadata, content);
             filePath = filePath.resolveSibling(filePath.getFileName() + ".dump");
             path = parent.resolve(filePath);
@@ -79,7 +80,7 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
         Files.writeString(path, content, StandardCharsets.UTF_8);
     }
 
-    private void setup(SourceFile source, FileMetadata fileMetadata, ClassNamedView classNamedView, ImportCollector importCollector) {
+    private void setup(SourceFile source, FileMetadata fileMetadata, ClassNamedView classNamedView, @Nullable ImportCollector importCollector) {
         this.getRewriters().forEach(rewriter -> {
             rewriter.source = source;
             rewriter.fileMetadata = fileMetadata;
@@ -99,7 +100,7 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
         content.append('\n');
         content.append("Indent unit : \"").append(indentUnit.content()).append("\" (").append(indentUnit.size()).append(" char)");
         content.append('\n');
-        content.append("Indent char : '").append(indentUnit.character()).append("' (").append((int) indentUnit.character()).append(")");
+        content.append("Indent char : '").append(indentUnit.character()).append("' (U+%04X)".formatted((int) indentUnit.character()));
         content.append('\n');
 
         for (SearchReplaceRewriter rewriter : this.getRewriters()) {

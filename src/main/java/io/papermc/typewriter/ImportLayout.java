@@ -85,7 +85,7 @@ public class ImportLayout {
             StringReader reader = new StringReader(line);
             reader.skipWhitespace();
 
-            if (reader.peek() == '[') {
+            if (reader.canRead() && reader.peek() == '[') {
                 reader.skip();
                 sectionName = reader.readUntil(']');
                 reader.skip();
@@ -249,14 +249,14 @@ public class ImportLayout {
         MERGED(Comparator.naturalOrder()),
 
         /**
-         * Generated imports will be written first followed by the old imports in the class.
-         * Order for each part is alphabetically.
+         * Generated imports will be written first followed by the original imports in the class.
+         * Each part are ordered alphabetically independently.
          */
         GENERATED_FIRST(Comparator.comparing(ImportTypeName::newlyAdded).reversed().thenComparing(Comparator.naturalOrder())),
 
         /**
-         * Generated imports will be written last after the old imports in the class.
-         * Order for each part is alphabetically.
+         * Generated imports will be written last after the original imports in the class.
+         * Each part are ordered alphabetically independently.
          */
         GENERATED_LAST(Comparator.comparing(ImportTypeName::newlyAdded).thenComparing(Comparator.naturalOrder()));
 

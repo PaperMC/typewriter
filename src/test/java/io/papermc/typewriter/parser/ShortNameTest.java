@@ -2,7 +2,7 @@ package io.papermc.typewriter.parser;
 
 import io.papermc.typewriter.ClassNamed;
 import io.papermc.typewriter.context.ImportTypeCollector;
-import io.papermc.typewriter.yaml.ImportShortNameMapping;
+import io.papermc.typewriter.yaml.ShortNameMapping;
 import io.papermc.typewriter.yaml.YamlMappingConverter;
 import name.GlobalImportType;
 import name.PackageClassImportType;
@@ -28,20 +28,14 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 public class ShortNameTest extends ParserTest {
 
     private static Arguments rootClass(Class<?> sampleClass) {
-        return innerClass(sampleClass, sampleClass);
-    }
-
-    private static Arguments innerClass(Class<?> sampleClass, Class<?> sampleInnerClass) {
-        String name = sampleClass.getSimpleName();
         return Arguments.of(
             CONTAINER.resolve(sampleClass.getCanonicalName().replace('.', '/') + ".java"),
-            sampleInnerClass,
-            name,
-            "expected/name/%s.yaml".formatted(sampleInnerClass.getName().substring(sampleInnerClass.getPackageName().length() + 1))
+            sampleClass,
+            "expected/name/%s.yaml".formatted(sampleClass.getName().substring(sampleClass.getPackageName().length() + 1))
         );
     }
 
-    private static Stream<Arguments> importTypeProvider() {
+    private static Stream<Arguments> importTypeSamples() {
         return Stream.of(
             rootClass(RegularImportType.class),
             rootClass(GlobalImportType.class),
@@ -53,12 +47,12 @@ public class ShortNameTest extends ParserTest {
     }
 
     @ParameterizedTest
-    @MethodSource("importTypeProvider")
+    @MethodSource("importTypeSamples")
     public void testTypeName(Path path,
                              Class<?> sampleClass,
-                             String name,
-                             @ConvertWith(ImportShortNameMappingConverter.class) ImportShortNameMapping mapping) throws IOException {
+                             @ConvertWith(ShortNameMappingConverter.class) ShortNameMapping mapping) throws IOException {
         ClassNamed accessSource = new ClassNamed(sampleClass);
+        String name = sampleClass.getSimpleName();
         final ImportTypeCollector importCollector = new ImportTypeCollector(accessSource.topLevel());
         importCollector.setAccessSource(accessSource);
         parseFile(path, importCollector);
@@ -68,7 +62,7 @@ public class ShortNameTest extends ParserTest {
         if (mapping.getShortNames() != null) {
             for (Map.Entry<String, String> expect : mapping.getShortNames().entrySet()) {
                 String typeName = expect.getKey();
-                Class<?> runtimeClass = classOr(expect.getKey(), null);
+                Class<?> runtimeClass = classOr(typeName, null);
                 assertNotNull(runtimeClass, "Runtime class cannot be null for import " + typeName);
                 assertEquals(expect.getValue(), importCollector.getShortName(runtimeClass, false),
                     "Short name of " + typeName + " doesn't match with collected imports for " + name + "! Import found: " + importCollector.getImports());
@@ -84,34 +78,35 @@ public class ShortNameTest extends ParserTest {
         }
     }
 
-    public static Stream<Arguments> innerTypeProvider() {
+    private static Arguments innerClass(Class<?> sampleClass) {
+        return Arguments.of(
+            sampleClass,
+            "expected/name/%s.yaml".formatted(sampleClass.getName().substring(sampleClass.getPackageName().length() + 1))
+        );
+    }
+
+    public static Stream<Arguments> innerTypeSamples() {
         return Stream.of(
-            rootClass(SelfInnerClass.class),
-            innerClass(SelfInnerClass.class, SelfInnerClass.A.B.C.class),
-            innerClass(SelfInnerClass.class, SelfInnerClass.D.class),
-            innerClass(SelfInnerClass.class, SelfInnerClass.A.B.E.class)
+            innerClass(SelfInnerClass.class),
+            innerClass(SelfInnerClass.A.B.C.class),
+            innerClass(SelfInnerClass.D.class),
+            innerClass(SelfInnerClass.A.B.E.class)
         );
     }
 
     @ParameterizedTest
-    @MethodSource("innerTypeProvider")
-    public void testInnerTypeName(Path path,
-                             Class<?> sampleClass,
-                             String name,
-                             @ConvertWith(ImportShortNameMappingConverter.class) ImportShortNameMapping mapping) throws IOException {
-        ClassNamed accessSource = new ClassNamed(sampleClass);
-        final ImportTypeCollector importCollector = new ImportTypeCollector(accessSource.topLevel());
-        importCollector.setAccessSource(accessSource);
-        parseFile(path, importCollector);
+    @MethodSource("innerTypeSamples")
+    public void testInnerTypeName(Class<?> sampleClass,
+                                  @ConvertWith(ShortNameMappingConverter.class) ShortNameMapping mapping) {
+        assertNotNull(mapping.getShortNames(), "Empty name mapping!");
 
-        assertNotNull(mapping.getShortNames(), "Empty expected import mapping!");
-
+        ClassNamed from = new ClassNamed(sampleClass);
         for (Map.Entry<String, String> expect : mapping.getShortNames().entrySet()) {
             String typeName = expect.getKey();
-            Class<?> runtimeClass = classOr(expect.getKey(), null);
+            Class<?> runtimeClass = classOr(typeName, null);
             assertNotNull(runtimeClass, "Runtime class cannot be null for import " + typeName);
-            assertEquals(expect.getValue(), importCollector.getShortestName(runtimeClass),
-                "Short name of " + typeName + " doesn't match with collected imports for " + name + "! Import found: " + importCollector.getImports());
+            assertEquals(expect.getValue(), from.relativize(new ClassNamed(runtimeClass)),
+                "Shortest access name of " + typeName + " doesn't match with the expected name from " + from.canonicalName() + " !");
         }
     }
 
@@ -123,10 +118,10 @@ public class ShortNameTest extends ParserTest {
         }
     }
 
-    private static class ImportShortNameMappingConverter extends YamlMappingConverter<ImportShortNameMapping> {
+    private static class ShortNameMappingConverter extends YamlMappingConverter<ShortNameMapping> {
 
-        protected ImportShortNameMappingConverter() {
-            super(ImportShortNameMapping.class);
+        protected ShortNameMappingConverter() {
+            super(ShortNameMapping.class);
         }
     }
 }

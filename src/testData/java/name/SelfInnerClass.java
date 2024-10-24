@@ -1,7 +1,5 @@
 package name;
 
-import name.SelfInnerClass.D;
-
 public class SelfInnerClass {
     public class A {
         public class B {
