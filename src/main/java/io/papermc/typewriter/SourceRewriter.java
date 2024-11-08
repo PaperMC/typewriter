@@ -29,7 +29,6 @@ public interface SourceRewriter {
     /**
      * Only used by Paper for new rewriter use {@link #writeToFile(Path, FileMetadata, SourceFile)}
      */
-    @Deprecated
-    // used only for paper test
+    @Deprecated // used only for paper test
     void writeToFile(Path readFolder, Path writeFolder, FileMetadata metadata, SourceFile file) throws IOException;
 }

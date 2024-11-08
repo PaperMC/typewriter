@@ -16,4 +16,14 @@ public class ReaderException extends IllegalStateException {
         this.file = file;
         return this;
     }
+
+    @Override
+    public String getMessage() {
+        StringBuilder message = new StringBuilder(super.getMessage());
+        if (this.file != null) {
+            message.append(" from class ").append(this.file.mainClass().canonicalName());
+        }
+
+        return message.toString();
+    }
 }

@@ -1,4 +1,4 @@
-package io.papermc.typewriter.utils;
+package io.papermc.typewriter.util;
 
 import com.google.common.base.Preconditions;
 import io.papermc.typewriter.ClassNamed;
@@ -44,6 +44,7 @@ public class ClassNamedView {
     public ClassNamedView subView(String relativePath) {
         Path newBase = this.base.resolve(relativePath);
         int deltaDepth = newBase.getNameCount() - this.base.getNameCount();
+        Preconditions.checkArgument(deltaDepth <= this.maxDepth, "Target path is too nested");
         return new ClassNamedView(this.sourceSet, this.maxDepth - deltaDepth, newBase);
     }
 

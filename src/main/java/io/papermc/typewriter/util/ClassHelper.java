@@ -1,4 +1,4 @@
-package io.papermc.typewriter.utils;
+package io.papermc.typewriter.util;
 
 public final class ClassHelper {
 

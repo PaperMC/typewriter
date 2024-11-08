@@ -1,6 +1,5 @@
 package io.papermc.typewriter.context;
 
-import com.google.common.base.Preconditions;
 import io.papermc.typewriter.ClassNamed;
 import io.papermc.typewriter.ImportLayout;
 import io.papermc.typewriter.parser.name.ProtoImportTypeName;
@@ -33,18 +32,10 @@ public class ImportTypeCollector implements ImportCollector {
     private final Set<ImportTypeName> addedImports = new LinkedHashSet<>();
 
     private final ClassNamed mainClass;
-    private ClassNamed accessSource;
     private boolean modified;
 
     public ImportTypeCollector(ClassNamed mainClass) {
         this.mainClass = mainClass;
-        this.accessSource = mainClass;
-    }
-
-    @Override
-    public void setAccessSource(ClassNamed accessSource) {
-        Preconditions.checkArgument(accessSource == null || accessSource.topLevel().equals(this.mainClass), "Access source must be a nested class of " + this.mainClass.canonicalName());
-        this.accessSource = accessSource == null ? this.mainClass : accessSource;
     }
 
     @Override
@@ -63,9 +54,7 @@ public class ImportTypeCollector implements ImportCollector {
 
         if (changed) {
             this.addedImports.add(new ImportTypeName(formattedName, isGlobal, false, true));
-            if (!this.modified) {
-                this.modified = true;
-            }
+            this.modified = true;
         }
     }
 
@@ -85,9 +74,7 @@ public class ImportTypeCollector implements ImportCollector {
 
         if (changed) {
             this.addedImports.add(new ImportTypeName(formattedName, isGlobal, true, true));
-            if (!this.modified) {
-                this.modified = true;
-            }
+            this.modified = true;
         }
     }
 

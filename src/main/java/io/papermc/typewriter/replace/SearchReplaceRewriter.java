@@ -1,11 +1,11 @@
 package io.papermc.typewriter.replace;
 
 import com.google.common.base.Preconditions;
-import io.papermc.typewriter.utils.ClassNamedView;
 import io.papermc.typewriter.FileMetadata;
 import io.papermc.typewriter.IndentUnit;
 import io.papermc.typewriter.SourceFile;
 import io.papermc.typewriter.context.ImportCollector;
+import io.papermc.typewriter.util.ClassNamedView;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.framework.qual.DefaultQualifier;
@@ -94,12 +94,12 @@ public class SearchReplaceRewriter extends SearchReplaceRewriterBase {
     }
 
     public void dump(StringBuilder content) {
-        content.append("Name : ").append(this.name);
+        content.append("Name: ").append(this.name);
 
         content.append('\n');
-        content.append("Start comment marker : ").append(this.options.startCommentMarker());
+        content.append("Start comment marker: ").append(this.options.startCommentMarker());
         content.append('\n');
-        content.append("End comment marker : ").append(this.options.endCommentMarker());
+        content.append("End comment marker: ").append(this.options.endCommentMarker());
         content.append('\n');
         content.append('\n');
 

@@ -3,18 +3,17 @@ package io.papermc.typewriter.parser;
 import io.papermc.typewriter.parser.exception.LexerException;
 
 public class UnicodeTranslator {
-    protected int cursor;
     private final char[] input;
 
     private int charSize = 1; // char size representation in the buffer (size of the escape), surrogate pair are handled
-    protected final char[] codePointCache; // code point cache holding character representation of the code point, limited to 2
+    protected final char[] codePointCache = new char[2]; // code point cache holding character representation of the code point, limited to 2
 
+    private int cursor;
     private int column; // character count (0-indexed) after unicode translation
     private int row = 1; // line count
 
     public UnicodeTranslator(char[] input) {
         this.input = input;
-        this.codePointCache = new char[2];
     }
 
     public boolean match(char c) {
@@ -103,11 +102,7 @@ public class UnicodeTranslator {
     }
 
     public int peekPoint() {
-        return this.peekPoint(0);
-    }
-
-    private int peekPoint(int offset) {
-        char hi = this.peek(offset);
+        char hi = this.peek();
         int size = this.charSize;
         this.codePointCache[0] = hi;
         if (!Character.isSurrogate(hi)) {
@@ -116,11 +111,11 @@ public class UnicodeTranslator {
         }
 
         if (Character.isHighSurrogate(hi)) {
-            if (!this.canRead(offset + size + 1)) {
+            if (!this.canRead(size + 1)) {
                 throw new LexerException("Invalid java source, found a high surrogate (\\u%04X) without its sibling".formatted((int) hi), this);
             }
 
-            char lo = this.peek(offset + size);
+            char lo = this.peek(size);
             if (isLineTerm(lo)) { // special case since the buffer is read entirely with its newline
                 throw new LexerException("Invalid java source, found a high surrogate (\\u%04X) without its sibling".formatted((int) hi), this);
             }

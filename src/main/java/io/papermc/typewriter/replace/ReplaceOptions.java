@@ -121,13 +121,8 @@ public record ReplaceOptions(
         }
 
         /**
-         * Provides the nested class targeted (if any) as extra context.
-         * This is mainly used in the import collector to get
-         * more accurate result when getting a shortened name.
-         * In case your rewriter is more complex and overwrite
-         * lines across different nested classes, you might be
-         * interested of using {@link io.papermc.typewriter.context.ImportCollector#setAccessSource(ClassNamed)}
-         * directly.
+         * Provides the nested class targeted (if any) as extra context
+         * for rewriter.
          *
          * @param nestedClass the nested class
          * @return the builder, for chaining

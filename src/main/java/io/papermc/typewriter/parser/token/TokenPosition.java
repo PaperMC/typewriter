@@ -2,9 +2,7 @@ package io.papermc.typewriter.parser.token;
 
 import java.util.function.IntSupplier;
 
-public final class TokenPosition {
-
-    public record AbsolutePos(int cursor, int row, int column) {}
+public final class TokenPosition implements TokenRecorder {
 
     private final IntSupplier cursorGetter;
     private final IntSupplier rowGetter;

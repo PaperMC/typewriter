@@ -145,7 +145,8 @@ public class ImportAnnotTest extends ParserTest {
                 Token finalToken = lexer.readToken();
                 assertIdentifier((CharSequenceToken) finalToken, TokenType.PUBLIC.name.length() + 1, TokenType.FINAL);
 
-                lexer.readToken(); // skip class token which is not recognized
+                Token classToken = lexer.readToken();
+                assertIdentifier((CharSequenceToken) classToken, TokenType.PUBLIC.name.length() + 1 + TokenType.FINAL.name.length() + 1, TokenType.IDENTIFIER, "class");
 
                 Token identifierToken = lexer.readToken();
                 assertIdentifier((CharSequenceToken) identifierToken, TokenType.PUBLIC.name.length() + 1 + TokenType.FINAL.name.length() + 1 + "class".length() + 1, TokenType.IDENTIFIER, "Api");

@@ -419,7 +419,7 @@ public class Lexer extends UnicodeTranslator {
 
     public Token readToken() {
         TokenType type = null;
-        TokenPosition tokenPos = TokenPosition.record(() -> this.cursor, this::getRow, this::getColumn);
+        TokenPosition tokenPos = TokenPosition.record(this::getCursor, this::getRow, this::getColumn);
     loop:
         while (this.canRead()) {
             char c = this.peek();

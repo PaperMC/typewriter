@@ -1,7 +1,6 @@
 package io.papermc.typewriter.replace;
 
 import com.google.common.base.Preconditions;
-import io.papermc.typewriter.utils.ClassNamedView;
 import io.papermc.typewriter.FileMetadata;
 import io.papermc.typewriter.ImportLayout;
 import io.papermc.typewriter.IndentUnit;
@@ -9,12 +8,12 @@ import io.papermc.typewriter.SourceFile;
 import io.papermc.typewriter.SourceRewriter;
 import io.papermc.typewriter.context.ImportCollector;
 import io.papermc.typewriter.context.ImportTypeCollector;
+import io.papermc.typewriter.parser.ImportParser;
 import io.papermc.typewriter.parser.Lexer;
 import io.papermc.typewriter.parser.StringReader;
-import io.papermc.typewriter.parser.TokenParser;
 import io.papermc.typewriter.parser.exception.ReaderException;
-import io.papermc.typewriter.parser.token.TokenPosition;
-import io.papermc.typewriter.parser.token.TokenType;
+import io.papermc.typewriter.parser.token.TokenBlockPosition;
+import io.papermc.typewriter.util.ClassNamedView;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.framework.qual.DefaultQualifier;
@@ -47,7 +46,7 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
 
         if (Files.isRegularFile(path)) {
             final Lexer lex;
-            final ImportCollector collector;
+            final ImportTypeCollector collector;
             try (BufferedReader buffer = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
                 lex = Lexer.fromReader(buffer);
                 collector = collectImport(file, lex);
@@ -58,12 +57,12 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
             this.setup(file, fileMetadata, new ClassNamedView(parent, 20, null), collector);
 
             try (BufferedReader reader = new BufferedReader(new CharArrayReader(lex.toCharArray()))) {
-                searchAndReplace(file, fileMetadata, reader, collector, content);
+                searchAndReplace(file, fileMetadata, reader, content);
             }
 
-            if (((ImportTypeCollector) collector).isModified()) { // if added entries
+            if (collector.isModified()) { // if added entries
                 // rewrite the imports
-                this.rewriteImports((ImportTypeCollector) collector, fileMetadata.importLayout().getRelevantSection(path), content);
+                this.rewriteImports(collector, fileMetadata.importLayout().getRelevantSection(path), content);
             }
         } else {
             LOGGER.warn("Target source file '{}' doesn't exists, dumping rewriters data instead...", filePath);
@@ -109,15 +108,13 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
         }
     }
 
-    private ImportCollector collectImport(SourceFile source, Lexer lexer) {
-        final ImportCollector importCollector = new ImportTypeCollector(source.mainClass());
-
-        final TokenParser tokenParser = new TokenParser(lexer);
-        tokenParser.collectImports(importCollector);
+    private ImportTypeCollector collectImport(SourceFile source, Lexer lexer) {
+        final ImportTypeCollector importCollector = new ImportTypeCollector(source.mainClass());
+        ImportParser.collectImports(lexer, importCollector);
         return importCollector;
     }
 
-    private void searchAndReplace(SourceFile file, FileMetadata fileMetadata, BufferedReader reader, ImportCollector importCollector, StringBuilder content) throws IOException {
+    private void searchAndReplace(SourceFile file, FileMetadata fileMetadata, BufferedReader reader, StringBuilder content) throws IOException {
         Set<SearchReplaceRewriter> rewriters = this.getRewriters();
         Preconditions.checkState(!rewriters.isEmpty());
 
@@ -161,7 +158,6 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
                             content.append('\n');
                         }
 
-                        foundRewriter.options.targetClass().ifPresentOrElse(importCollector::setAccessSource, () -> importCollector.setAccessSource(null));
                         foundRewriter.insert(new SearchMetadata(indent, strippedContent.toString(), i), content);
                         strippedContent = null;
                     }
@@ -188,7 +184,6 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
                 if (foundRewriter.options.exactReplacement()) {
                     // there's no generated comment here since when the size is equals the replaced content doesn't depend on the game content
                     // if it does that means the replaced content might not be equals during MC update because of adding/removed content
-                    foundRewriter.options.targetClass().ifPresentOrElse(importCollector::setAccessSource, () -> importCollector.setAccessSource(null));
                     foundRewriter.replaceLine(new SearchMetadata(indent, line, i), content);
                 } else {
                     usedBuilder = strippedContent;
@@ -214,9 +209,8 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
 
     private void rewriteImports(ImportTypeCollector collector, ImportLayout.Section layout, StringBuilder into) {
         Lexer lex = new Lexer(into.toString().toCharArray());
-        TokenParser parser = new TokenParser(lex);
-        TokenPosition position = parser.trackImportPosition(); // need to retrack this just in case other rewriters moved things around
-        into.replace(position.startPos.cursor() - TokenType.IMPORT.name.length(), position.endPos.cursor(), collector.writeImports(layout));
+        TokenBlockPosition position = ImportParser.trackImportPosition(lex); // need to retrack this just in case other rewriters moved things around
+        into.replace(position.startPos.cursor(), position.endPos.cursor(), collector.writeImports(layout));
     }
 
     @VisibleForTesting

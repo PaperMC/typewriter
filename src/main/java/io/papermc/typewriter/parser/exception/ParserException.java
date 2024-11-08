@@ -13,14 +13,6 @@ public class ParserException extends ReaderException {
 
     @Override
     public String getMessage() {
-        StringBuilder message = new StringBuilder(super.getMessage());
-        message.append(" near/at position ").append(this.badToken.column());
-        message.append(" in line ").append(this.badToken.row());
-        message.append(" (token: ").append(this.badToken).append(')');
-        if (this.file != null) {
-            message.append(" from class ").append(this.file.mainClass().canonicalName());
-        }
-
-        return message.toString();
+        return "%s near/at position %d in line %d (token: %s)".formatted(super.getMessage(), this.badToken.column(), this.badToken.row(), this.badToken);
     }
 }

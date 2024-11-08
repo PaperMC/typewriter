@@ -19,13 +19,6 @@ public class LexerException extends ReaderException {
 
     @Override
     public String getMessage() {
-        StringBuilder message = new StringBuilder(super.getMessage());
-        message.append(" near/at position ").append(this.position);
-        message.append(" in line ").append(this.line);
-        if (this.file != null) {
-            message.append(" from class ").append(this.file.mainClass().canonicalName());
-        }
-
-        return message.toString();
+        return "%s near/at position %d in line %d".formatted(super.getMessage(), this.position, this.line);
     }
 }

@@ -1,7 +1,7 @@
 package io.papermc.typewriter;
 
 import com.google.common.base.Preconditions;
-import io.papermc.typewriter.utils.Formatting;
+import io.papermc.typewriter.util.Formatting;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.framework.qual.DefaultQualifier;
 import org.jetbrains.annotations.Contract;

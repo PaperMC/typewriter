@@ -4,32 +4,34 @@ package io.papermc.typewriter.parser.name;
 public class ProtoImportTypeName extends ProtoTypeName {
 
     private boolean isStatic;
+    private boolean isGlobal;
     private String staticMemberName;
-    private boolean global;
 
     public boolean isStatic() {
         return this.isStatic;
+    }
+
+    public boolean isGlobal() {
+        return this.isGlobal;
+    }
+
+    public void asStatic() {
+        this.isStatic = true;
+    }
+
+    public void asGlobal() {
+        this.isGlobal = true;
     }
 
     public String getStaticMemberName() {
         return this.staticMemberName;
     }
 
-    public boolean isGlobal() {
-        return this.global;
-    }
-
-    public void setStatic() {
-        this.isStatic = true;
-    }
-
-    public void setGlobal() {
-        this.global = true;
-    }
-
     @Override
     public void append(String identifier) {
         super.append(identifier);
-        this.staticMemberName = identifier;
+        if (!this.isGlobal && this.isStatic) {
+            this.staticMemberName = identifier;
+        }
     }
 }

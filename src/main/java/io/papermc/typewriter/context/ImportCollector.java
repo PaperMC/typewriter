@@ -1,14 +1,10 @@
 package io.papermc.typewriter.context;
 
 import io.papermc.typewriter.ClassNamed;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 public interface ImportCollector {
 
     ImportCollector NO_OP = new ImportCollector() { // only used for dump
-        @Override
-        public void setAccessSource(@Nullable ClassNamed accessSource) {
-        }
 
         @Override
         public void addImport(String typeName) {
@@ -33,8 +29,6 @@ public interface ImportCollector {
             return type.canonicalName();
         }
     };
-
-    void setAccessSource(@Nullable ClassNamed accessSource);
 
     void addImport(String typeName);
 

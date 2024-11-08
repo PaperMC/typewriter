@@ -13,11 +13,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.fail;
 
 @Tag("parser")
 public class ParserTest {
@@ -25,20 +23,8 @@ public class ParserTest {
     protected static final Path CONTAINER = Path.of(System.getProperty("user.dir"), "src/testData/java");
 
     protected void parseFile(Path path, ImportCollector importCollector) throws IOException {
-        parseFile(path, importCollector, null);
-    }
-
-    protected void parseFile(Path path, ImportCollector importCollector, @Nullable BiConsumer<Lexer, Token> lastTokenCallback) throws IOException {
         try (BufferedReader reader = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
-            Lexer lex = Lexer.fromReader(reader);
-            final TokenParser tokenParser = new TokenParser(lex);
-            Token token = tokenParser.collectImports(importCollector);
-            if (lastTokenCallback != null) {
-                if (token == null || token.type() == TokenType.EOI) {
-                    fail("File is empty or doesn't contains the required top level scope needed for this test to run");
-                }
-                lastTokenCallback.accept(lex, token);
-            }
+            ImportParser.collectImports(Lexer.fromReader(reader), importCollector);
         }
     }
 

@@ -1,6 +1,6 @@
 package io.papermc.typewriter.parser.token;
 
-public interface Token {
+public sealed interface Token permits RawToken, CharSequenceToken, CharSequenceBlockToken {
 
     TokenType type();
 

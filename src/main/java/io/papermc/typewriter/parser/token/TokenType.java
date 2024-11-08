@@ -4,6 +4,7 @@ import org.jetbrains.annotations.ApiStatus;
 
 public enum TokenType {
     // keywords
+    PACKAGE("package"),
     IMPORT("import"),
     STATIC("static"),
     PUBLIC("public"),

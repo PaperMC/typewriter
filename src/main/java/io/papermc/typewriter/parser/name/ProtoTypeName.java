@@ -24,8 +24,4 @@ public class ProtoTypeName {
     public String getTypeName() {
         return this.name.toString();
     }
-
-    public boolean isEmpty() {
-        return this.name == null || this.name.isEmpty();
-    }
 }

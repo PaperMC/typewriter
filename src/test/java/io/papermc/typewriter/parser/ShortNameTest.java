@@ -51,10 +51,8 @@ public class ShortNameTest extends ParserTest {
     public void testTypeName(Path path,
                              Class<?> sampleClass,
                              @ConvertWith(ShortNameMappingConverter.class) ShortNameMapping mapping) throws IOException {
-        ClassNamed accessSource = new ClassNamed(sampleClass);
         String name = sampleClass.getSimpleName();
-        final ImportTypeCollector importCollector = new ImportTypeCollector(accessSource.topLevel());
-        importCollector.setAccessSource(accessSource);
+        final ImportTypeCollector importCollector = new ImportTypeCollector(new ClassNamed(sampleClass));
         parseFile(path, importCollector);
 
         assertFalse(mapping.getShortNames() == null && mapping.getMemberShortNames() == null, "Empty expected import mapping!");

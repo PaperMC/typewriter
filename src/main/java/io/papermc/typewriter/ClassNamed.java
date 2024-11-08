@@ -2,7 +2,7 @@ package io.papermc.typewriter;
 
 import com.google.common.base.Preconditions;
 import io.papermc.typewriter.parser.name.ProtoImportTypeName;
-import io.papermc.typewriter.utils.ClassHelper;
+import io.papermc.typewriter.util.ClassHelper;
 import javax.lang.model.SourceVersion;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
