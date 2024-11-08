@@ -3,7 +3,7 @@ package io.papermc.typewriter.parser;
 import io.papermc.typewriter.parser.exception.LexerException;
 import io.papermc.typewriter.parser.token.CharSequenceBlockToken;
 import io.papermc.typewriter.parser.token.CharSequenceToken;
-import io.papermc.typewriter.parser.token.RawToken;
+import io.papermc.typewriter.parser.token.CharToken;
 import io.papermc.typewriter.parser.token.Token;
 import io.papermc.typewriter.parser.token.TokenPosition;
 import io.papermc.typewriter.parser.token.TokenType;
@@ -558,7 +558,6 @@ public class Lexer extends UnicodeTranslator {
         }
 
         if (type == null && !this.canRead()) {
-            tokenPos.begin();
             type = TokenType.EOI;
         }
 
@@ -588,7 +587,11 @@ public class Lexer extends UnicodeTranslator {
             return new CharSequenceBlockToken(type, this.readLineBuffer(), startPos.row(), endPos.row(), startPos.column(), endPos.column(), startPos.cursor(), endPos.cursor());
         }
 
-        return new RawToken(type, tokenPos.startPos.row(), tokenPos.startPos.column(), tokenPos.startPos.cursor());
+        if (type != TokenType.EOI) {
+            return new CharToken(type, type.name.charAt(0), tokenPos.startPos.row(), tokenPos.startPos.column(), tokenPos.startPos.cursor(), tokenPos.startPos.cursor() + this.charSize);
+        }
+
+        return Token.END_OF_INPUT;
     }
 
     private boolean isBlank(String line) {

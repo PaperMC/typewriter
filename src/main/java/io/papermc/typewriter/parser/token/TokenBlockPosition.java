@@ -6,6 +6,9 @@ public final class TokenBlockPosition implements TokenRecorder {
     public AbsolutePos endPos;
 
     public void begin(Token token) {
+        if (token.type() == TokenType.EOI) {
+            throw new UnsupportedOperationException("Cannot track end of input token");
+        }
         if (this.startPos != null) {
             throw new UnsupportedOperationException("Cannot begin a token position twice");
         }
@@ -17,12 +20,16 @@ public final class TokenBlockPosition implements TokenRecorder {
     }
 
     public void end(Token token) {
+        if (token.type() == TokenType.EOI) {
+            throw new UnsupportedOperationException("Cannot track end of input token");
+        }
+
         int endPos;
         int endRow = token.row(), endColumn;
         switch (token) {
-            case RawToken rawToken -> {
-                endPos = rawToken.pos() + 1; // todo check: this is probably wrong with unicode escape
-                endColumn = rawToken.column() + 1;
+            case CharToken charToken -> {
+                endPos = charToken.endPos();
+                endColumn = charToken.column() + 1;
             }
             case CharSequenceToken charSequenceToken -> {
                 endPos = charSequenceToken.endPos();
@@ -33,6 +40,7 @@ public final class TokenBlockPosition implements TokenRecorder {
                 endRow = charSequenceBlockToken.endRow();
                 endColumn = charSequenceBlockToken.endColumn();
             }
+            default -> throw new IllegalStateException("Unexpected value: " + token);
         }
 
         this.endPos = new AbsolutePos(

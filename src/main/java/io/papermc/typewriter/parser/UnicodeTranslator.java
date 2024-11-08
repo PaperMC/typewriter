@@ -5,7 +5,7 @@ import io.papermc.typewriter.parser.exception.LexerException;
 public class UnicodeTranslator {
     private final char[] input;
 
-    private int charSize = 1; // char size representation in the buffer (size of the escape), surrogate pair are handled
+    protected int charSize = 1; // char size representation in the buffer (size of the escape), surrogate pair are handled
     protected final char[] codePointCache = new char[2]; // code point cache holding character representation of the code point, limited to 2
 
     private int cursor;
@@ -32,11 +32,13 @@ public class UnicodeTranslator {
         }
 
         int previousCursor = this.cursor;
+        int previousColumn = this.column;
         // with unicode escape there's no easy way to do this without resetting the cursor later due to mismatch
         // the fact that multiple unicode marker ('u') are allowed doesn't help either
         for (int i = 0; i < size; i++) {
             if (!this.canRead() || this.peek() != str.charAt(i)) {
                 this.cursor = previousCursor;
+                this.column = previousColumn;
                 return false;
             }
 

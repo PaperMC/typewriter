@@ -59,7 +59,7 @@ public final class ImportParser {
                 },
                 params -> params.asRepeatable(tokenPos::begin)
             )
-            .executeOrThrow((failedTask, token) -> failedTask.createFailure("Wrong token found tracking import section position", token));
+            .executeOrThrow((failedTask, token) -> failedTask.createFailure("Wrong token found while tracking import section position", token));
         return tokenPos;
     }
 
