@@ -1,5 +1,7 @@
 package io.papermc.typewriter;
 
+import io.papermc.typewriter.context.SourcesMetadata;
+
 import java.io.IOException;
 import java.nio.file.Path;
 
@@ -22,13 +24,13 @@ public interface SourceRewriter {
      * @param file   the source file
      * @throws IOException if an I/O error occur
      */
-    default void writeToFile(Path parent, FileMetadata metadata, SourceFile file) throws IOException {
+    default void writeToFile(Path parent, SourcesMetadata metadata, SourceFile file) throws IOException {
         writeToFile(parent, parent, metadata, file);
     }
 
     /**
-     * Only used by Paper for new rewriter use {@link #writeToFile(Path, FileMetadata, SourceFile)}
+     * Only used by Paper for new rewriter use {@link #writeToFile(Path, SourcesMetadata, SourceFile)}
      */
     @Deprecated // used only for paper test
-    void writeToFile(Path readFolder, Path writeFolder, FileMetadata metadata, SourceFile file) throws IOException;
+    void writeToFile(Path readFolder, Path writeFolder, SourcesMetadata metadata, SourceFile file) throws IOException;
 }

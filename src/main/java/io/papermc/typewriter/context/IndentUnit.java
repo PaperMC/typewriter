@@ -1,7 +1,7 @@
-package io.papermc.typewriter;
+package io.papermc.typewriter.context;
 
 import com.google.common.base.Preconditions;
-import io.papermc.typewriter.util.Formatting;
+import io.papermc.typewriter.ClassNamed;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.framework.qual.DefaultQualifier;
 import org.jetbrains.annotations.Contract;
@@ -63,7 +63,7 @@ public record IndentUnit(String content, int size, char character) implements Ch
 
     public String adjustContentFor(ClassNamed classNamed) {
         if (classNamed.knownClass() == null) {
-            return this.content.repeat(Formatting.countOccurrences(classNamed.dottedNestedName(), '.') + 1);
+            return this.content.repeat(this.countOccurrences(classNamed.dottedNestedName(), '.') + 1);
         }
 
         Class<?> parent = classNamed.knownClass().getEnclosingClass();
@@ -73,5 +73,15 @@ public record IndentUnit(String content, int size, char character) implements Ch
             parent = parent.getEnclosingClass();
         }
         return indentBuilder.toString();
+    }
+
+    private int countOccurrences(String value, char match) {
+        int count = 0;
+        for (int i = 0, len = value.length(); i < len; i++) {
+            if (value.charAt(i) == match) {
+                count++;
+            }
+        }
+        return count;
     }
 }

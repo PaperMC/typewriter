@@ -1,6 +1,6 @@
 package io.papermc.typewriter.parser.name;
 
-public class ProtoTypeName {
+public class ProtoQualifiedName {
 
     public static final char IDENTIFIER_SEPARATOR = '.';
 
@@ -17,11 +17,7 @@ public class ProtoTypeName {
         this.name.append(IDENTIFIER_SEPARATOR);
     }
 
-    public void popSeparator() {
-        this.name.deleteCharAt(this.name.length() - 1);
-    }
-
-    public String getTypeName() {
+    public String getName() {
         return this.name.toString();
     }
 }

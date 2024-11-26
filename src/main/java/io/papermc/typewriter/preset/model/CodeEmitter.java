@@ -1,6 +1,6 @@
 package io.papermc.typewriter.preset.model;
 
-import io.papermc.typewriter.IndentUnit;
+import io.papermc.typewriter.context.IndentUnit;
 
 public interface CodeEmitter {
 

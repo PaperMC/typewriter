@@ -1,6 +1,6 @@
 package io.papermc.typewriter.parser.iterator;
 
-import io.papermc.typewriter.parser.Lexer;
+import io.papermc.typewriter.parser.Tokenizer;
 import io.papermc.typewriter.parser.token.Token;
 import io.papermc.typewriter.parser.token.TokenType;
 
@@ -10,14 +10,12 @@ import java.util.NoSuchElementException;
 
 public class NavigableToken {
 
-    private final Lexer lex;
-    private final boolean ignoreEOI;
+    private final Tokenizer tokenizer;
     private final List<Token> tokens;
     private int index = 0;
 
-    public NavigableToken(Lexer lex, boolean ignoreEOI) {
-        this.lex = lex;
-        this.ignoreEOI = ignoreEOI;
+    public NavigableToken(Tokenizer tokenizer) {
+        this.tokenizer = tokenizer;
         this.tokens = new ArrayList<>();
     }
 
@@ -38,19 +36,13 @@ public class NavigableToken {
     }
 
     public boolean hasNext() {
-        boolean canRead = this.lex.canRead();
-        if (canRead) {
-            if (!this.ignoreEOI) {
-                Token nextToken = this.getToken(this.index);
-                if (nextToken == null) {
-                    nextToken = this.lex.readToken();
-                    this.setToken(this.index, nextToken);
-                }
-                return nextToken.type() != TokenType.EOI;
-            }
+        Token nextToken = this.getToken(this.index);
+        if (nextToken == null) {
+            nextToken = this.tokenizer.readToken();
+            this.setToken(this.index, nextToken);
         }
 
-        return canRead;
+        return nextToken.type() != TokenType.EOI;
     }
 
     public Token next() {
@@ -76,7 +68,7 @@ public class NavigableToken {
 
         Token token = this.getToken(this.index);
         if (token == null) {
-            token = this.lex.readToken();
+            token = this.tokenizer.readToken();
             this.setToken(this.index, token);
         }
         if (updateCursor) {

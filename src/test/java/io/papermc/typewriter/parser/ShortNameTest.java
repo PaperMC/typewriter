@@ -1,7 +1,8 @@
 package io.papermc.typewriter.parser;
 
 import io.papermc.typewriter.ClassNamed;
-import io.papermc.typewriter.context.ImportTypeCollector;
+import io.papermc.typewriter.context.ImportCategory;
+import io.papermc.typewriter.context.ImportNameCollector;
 import io.papermc.typewriter.yaml.ShortNameMapping;
 import io.papermc.typewriter.yaml.YamlMappingConverter;
 import name.GlobalImportType;
@@ -21,9 +22,14 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.stream.Stream;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ShortNameTest extends ParserTest {
 
@@ -52,26 +58,28 @@ public class ShortNameTest extends ParserTest {
                              Class<?> sampleClass,
                              @ConvertWith(ShortNameMappingConverter.class) ShortNameMapping mapping) throws IOException {
         String name = sampleClass.getSimpleName();
-        final ImportTypeCollector importCollector = new ImportTypeCollector(new ClassNamed(sampleClass));
-        parseFile(path, importCollector);
+        final ImportNameCollector importCollector = new ImportNameCollector(new ClassNamed(sampleClass));
+        collectImportsFrom(path, importCollector);
 
         assertFalse(mapping.getShortNames() == null && mapping.getMemberShortNames() == null, "Empty expected import mapping!");
 
         if (mapping.getShortNames() != null) {
             for (Map.Entry<String, String> expect : mapping.getShortNames().entrySet()) {
                 String typeName = expect.getKey();
-                Class<?> runtimeClass = classOr(typeName, null);
-                assertNotNull(runtimeClass, "Runtime class cannot be null for import " + typeName);
+                Class<?> runtimeClass = assertDoesNotThrow(() -> Class.forName(typeName), "Runtime class is unknown for import " + typeName);
                 assertEquals(expect.getValue(), importCollector.getShortName(runtimeClass, false),
-                    "Short name of " + typeName + " doesn't match with collected imports for " + name + "! Import found: " + importCollector.getImports());
+                    () -> "Short name of " + typeName + " doesn't match with collected imports for " + name + "! Import found: " + importCollector.getImportMap().get(ImportCategory.TYPE));
             }
         }
 
-        if (mapping.getMemberShortNames() != null) {
-            for (Map.Entry<String, String> expect : mapping.getMemberShortNames().entrySet()) {
-                String fullName = expect.getKey();
-                assertEquals(expect.getValue(), importCollector.getStaticMemberShortName(fullName),
-                    "Short name of static member/class " + fullName + " doesn't match with collected imports for " + name + "! Static imports found: " + importCollector.getStaticImports());
+        Map<String, String> memberShortNames = mapping.getMemberShortNames();
+        if (memberShortNames != null) {
+            for (Map.Entry<String, String> expect : memberShortNames.entrySet()) {
+                String expectedName = expect.getKey();
+                String[] names = expectedName.split(":", 2);
+                assertSame(2, names.length);
+                assertEquals(expect.getValue(), importCollector.getStaticMemberShortName(names[0], names[1]),
+                    () -> "Short name of static member/class " + expectedName + " doesn't match with collected imports for " + name + "! Static imports found: " + importCollector.getImportMap().get(ImportCategory.STATIC));
             }
         }
     }
@@ -101,18 +109,9 @@ public class ShortNameTest extends ParserTest {
         ClassNamed from = new ClassNamed(sampleClass);
         for (Map.Entry<String, String> expect : mapping.getShortNames().entrySet()) {
             String typeName = expect.getKey();
-            Class<?> runtimeClass = classOr(typeName, null);
-            assertNotNull(runtimeClass, "Runtime class cannot be null for import " + typeName);
+            Class<?> runtimeClass = assertDoesNotThrow(() -> Class.forName(typeName), "Runtime class is unknown for " + typeName);
             assertEquals(expect.getValue(), from.relativize(new ClassNamed(runtimeClass)),
                 "Shortest access name of " + typeName + " doesn't match with the expected name from " + from.canonicalName() + " !");
-        }
-    }
-
-    private static Class<?> classOr(String className, Class<?> defaultClass) {
-        try {
-            return Class.forName(className);
-        } catch (ClassNotFoundException ignored) {
-            return defaultClass;
         }
     }
 

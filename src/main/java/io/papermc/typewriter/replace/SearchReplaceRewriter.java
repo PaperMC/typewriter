@@ -1,8 +1,9 @@
 package io.papermc.typewriter.replace;
 
 import com.google.common.base.Preconditions;
-import io.papermc.typewriter.FileMetadata;
-import io.papermc.typewriter.IndentUnit;
+import io.papermc.typewriter.context.FileMetadata;
+import io.papermc.typewriter.context.SourcesMetadata;
+import io.papermc.typewriter.context.IndentUnit;
 import io.papermc.typewriter.SourceFile;
 import io.papermc.typewriter.context.ImportCollector;
 import io.papermc.typewriter.util.ClassNamedView;
@@ -29,7 +30,7 @@ public class SearchReplaceRewriter extends SearchReplaceRewriterBase {
     private static final Logger LOGGER = LoggerFactory.getLogger(SearchReplaceRewriter.class);
 
     protected @MonotonicNonNull SourceFile source;
-    protected @MonotonicNonNull FileMetadata fileMetadata;
+    protected @MonotonicNonNull SourcesMetadata sourcesMetadata;
     protected @MonotonicNonNull ClassNamedView classNamedView;
     protected @MonotonicNonNull ImportCollector importCollector;
 
@@ -37,7 +38,7 @@ public class SearchReplaceRewriter extends SearchReplaceRewriterBase {
     protected @MonotonicNonNull ReplaceOptions options;
 
     public IndentUnit indentUnit() {
-        return this.source.indentUnit().orElse(this.fileMetadata.indentUnit());
+        return this.source.metadata().flatMap(FileMetadata::indentUnit).orElse(this.sourcesMetadata.indentUnit());
     }
 
     @Contract(value = "_ -> this", mutates = "this")

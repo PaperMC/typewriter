@@ -1,27 +1,22 @@
 package io.papermc.typewriter.registration;
 
-import io.papermc.typewriter.FileMetadata;
-import io.papermc.typewriter.IndentUnit;
+import io.papermc.typewriter.context.SourcesMetadata;
 import io.papermc.typewriter.SourceFile;
 import io.papermc.typewriter.SourceRewriter;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class SourceSetRewriterImpl<T extends SourceSetRewriter<T>> implements SourceSetRewriter<T> {
 
-    protected final Map<SourceFile, SourceRewriter> rewrites = new HashMap<>();
-    protected final FileMetadata fileMetadata;
+    protected final Map<SourceFile, SourceRewriter> rewrites = new LinkedHashMap<>();
+    protected final SourcesMetadata metadata;
 
-    public SourceSetRewriterImpl(FileMetadata fileMetadata) {
-        this.fileMetadata = fileMetadata;
-    }
-
-    public SourceSetRewriterImpl(IndentUnit indentUnit) {
-        this(FileMetadata.of(indentUnit));
+    public SourceSetRewriterImpl(SourcesMetadata metadata) {
+        this.metadata = metadata;
     }
 
     @Override
@@ -40,7 +35,7 @@ public class SourceSetRewriterImpl<T extends SourceSetRewriter<T>> implements So
     @Override
     public void apply(Path output) throws IOException {
         for (Map.Entry<SourceFile, SourceRewriter> rewriter : this.rewrites.entrySet()) {
-            rewriter.getValue().writeToFile(output, this.fileMetadata, rewriter.getKey());
+            rewriter.getValue().writeToFile(output, this.metadata, rewriter.getKey());
         }
     }
 }

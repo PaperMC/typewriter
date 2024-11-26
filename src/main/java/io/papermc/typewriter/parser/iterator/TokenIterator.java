@@ -1,6 +1,6 @@
 package io.papermc.typewriter.parser.iterator;
 
-import io.papermc.typewriter.parser.Lexer;
+import io.papermc.typewriter.parser.Tokenizer;
 import io.papermc.typewriter.parser.token.Token;
 import io.papermc.typewriter.parser.token.TokenType;
 
@@ -9,29 +9,21 @@ import java.util.NoSuchElementException;
 
 public class TokenIterator implements Iterator<Token> {
 
-    protected final Lexer lex;
-    private final boolean ignoreEOI;
+    protected final Tokenizer tokenizer;
 
-    private Token cachedToken;
+    private Token nextToken;
 
-    public TokenIterator(Lexer lex, boolean ignoreEOI) {
-        this.lex = lex;
-        this.ignoreEOI = ignoreEOI;
+    public TokenIterator(Tokenizer tokenizer) {
+        this.tokenizer = tokenizer;
     }
 
     @Override
     public boolean hasNext() {
-        boolean canRead = this.lex.canRead();
-        if (canRead) {
-            if (!this.ignoreEOI) {
-                if (this.cachedToken == null) {
-                    this.cachedToken = this.lex.readToken();
-                }
-                return this.cachedToken.type() != TokenType.EOI;
-            }
+        if (this.nextToken == null) {
+            this.nextToken = this.tokenizer.readToken();
         }
 
-        return canRead;
+        return this.nextToken.type() != TokenType.EOI;
     }
 
     @Override
@@ -40,12 +32,8 @@ public class TokenIterator implements Iterator<Token> {
             throw new NoSuchElementException();
         }
 
-        if (!this.ignoreEOI) {
-            Token cached = this.cachedToken;
-            this.cachedToken = null;
-            return cached;
-        }
-
-        return this.lex.readToken();
+        Token cached = this.nextToken; // next token is always defined after hasNext
+        this.nextToken = null;
+        return cached;
     }
 }

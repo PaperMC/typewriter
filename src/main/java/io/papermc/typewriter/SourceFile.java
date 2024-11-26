@@ -1,6 +1,7 @@
 package io.papermc.typewriter;
 
 import com.google.common.base.Preconditions;
+import io.papermc.typewriter.context.FileMetadata;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.framework.qual.DefaultQualifier;
@@ -11,7 +12,7 @@ import java.util.Iterator;
 import java.util.Optional;
 
 @DefaultQualifier(NonNull.class)
-public record SourceFile(ClassNamed mainClass, Path path, Optional<IndentUnit> indentUnit) {
+public record SourceFile(ClassNamed mainClass, Path path, Optional<FileMetadata> metadata) {
 
     public SourceFile {
         Preconditions.checkArgument(mainClass.isTopLevel(), "Main class is not a top level class!");
@@ -21,12 +22,12 @@ public record SourceFile(ClassNamed mainClass, Path path, Optional<IndentUnit> i
     }
 
     @Contract(value = "_, _ -> new", pure = true)
-    public static SourceFile of(ClassNamed mainClass, @Nullable IndentUnit indentUnit) {
+    public static SourceFile of(ClassNamed mainClass, @Nullable FileMetadata metadata) {
         Path path = Path.of(
             mainClass.packageName().replace('.', '/'),
             mainClass.simpleName().concat(".java")
         );
-        return new SourceFile(mainClass, path, Optional.ofNullable(indentUnit));
+        return new SourceFile(mainClass, path, Optional.ofNullable(metadata));
     }
 
     @Contract(value = "_ -> new", pure = true)
@@ -35,8 +36,8 @@ public record SourceFile(ClassNamed mainClass, Path path, Optional<IndentUnit> i
     }
 
     @Contract(value = "_, _ -> new", pure = true)
-    public static SourceFile of(Class<?> mainClass, @Nullable IndentUnit indentUnit) {
-        return of(new ClassNamed(mainClass), indentUnit);
+    public static SourceFile of(Class<?> mainClass, @Nullable FileMetadata metadata) {
+        return of(new ClassNamed(mainClass), metadata);
     }
 
     @Contract(value = "_ -> new", pure = true)
@@ -50,7 +51,7 @@ public record SourceFile(ClassNamed mainClass, Path path, Optional<IndentUnit> i
     }
 
     @Contract(value = "_, _ -> new", pure = true)
-    public static SourceFile of(Path path, @Nullable IndentUnit indentUnit) {
+    public static SourceFile of(Path path, @Nullable FileMetadata metadata) {
         Preconditions.checkArgument(path.getNameCount() > 0, "Path %s cannot be a root element", path);
 
         StringBuilder packageName = new StringBuilder();
@@ -70,6 +71,6 @@ public record SourceFile(ClassNamed mainClass, Path path, Optional<IndentUnit> i
         return new SourceFile(ClassNamed.of(
             packageName.toString(),
             dotIndex == -1 ? name : name.substring(0, dotIndex)
-        ), path, Optional.ofNullable(indentUnit));
+        ), path, Optional.ofNullable(metadata));
     }
 }

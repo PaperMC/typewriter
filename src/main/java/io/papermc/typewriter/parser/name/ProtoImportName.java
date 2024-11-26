@@ -1,7 +1,6 @@
 package io.papermc.typewriter.parser.name;
 
-
-public class ProtoImportTypeName extends ProtoTypeName {
+public class ProtoImportName extends ProtoQualifiedName {
 
     private boolean isStatic;
     private boolean isGlobal;
@@ -30,7 +29,7 @@ public class ProtoImportTypeName extends ProtoTypeName {
     @Override
     public void append(String identifier) {
         super.append(identifier);
-        if (!this.isGlobal && this.isStatic) {
+        if (this.isStatic) {
             this.staticMemberName = identifier;
         }
     }

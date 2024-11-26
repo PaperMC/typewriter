@@ -1,18 +1,19 @@
 package io.papermc.typewriter.replace;
 
 import com.google.common.base.Preconditions;
-import io.papermc.typewriter.FileMetadata;
-import io.papermc.typewriter.ImportLayout;
-import io.papermc.typewriter.IndentUnit;
+import io.papermc.typewriter.context.FileMetadata;
+import io.papermc.typewriter.context.SourcesMetadata;
+import io.papermc.typewriter.context.ImportLayout;
+import io.papermc.typewriter.context.IndentUnit;
 import io.papermc.typewriter.SourceFile;
 import io.papermc.typewriter.SourceRewriter;
 import io.papermc.typewriter.context.ImportCollector;
-import io.papermc.typewriter.context.ImportTypeCollector;
+import io.papermc.typewriter.context.ImportNameCollector;
 import io.papermc.typewriter.parser.ImportParser;
 import io.papermc.typewriter.parser.Lexer;
 import io.papermc.typewriter.parser.StringReader;
 import io.papermc.typewriter.parser.exception.ReaderException;
-import io.papermc.typewriter.parser.token.TokenBlockPosition;
+import io.papermc.typewriter.parser.token.pos.TokenCapture;
 import io.papermc.typewriter.util.ClassNamedView;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -24,6 +25,7 @@ import org.slf4j.LoggerFactory;
 import java.io.BufferedReader;
 import java.io.CharArrayReader;
 import java.io.IOException;
+import java.io.LineNumberReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -38,68 +40,69 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
     private static final Logger LOGGER = LoggerFactory.getLogger(SearchReplaceRewriterBase.class);
 
     @Override
-    public void writeToFile(Path parent, Path writeFolder, FileMetadata fileMetadata, SourceFile file) throws IOException {
+    public void writeToFile(Path parent, Path writeFolder, SourcesMetadata sourcesMetadata, SourceFile file) throws IOException {
         Path filePath = file.path();
 
-        Path path = parent.resolve(filePath);
+        final Path path = parent.resolve(filePath);
+        Path destinationPath;
         StringBuilder content = new StringBuilder();
 
         if (Files.isRegularFile(path)) {
             final Lexer lex;
-            final ImportTypeCollector collector;
             try (BufferedReader buffer = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
                 lex = Lexer.fromReader(buffer);
-                collector = collectImport(file, lex);
             } catch (ReaderException ex) {
                 throw ex.withAdditionalContext(file);
             }
 
-            this.setup(file, fileMetadata, new ClassNamedView(parent, 20, null), collector);
+            ImportNameCollector collector = collectImport(file, lex);
+            this.setup(file, sourcesMetadata, new ClassNamedView(parent, 20, null), collector);
 
-            try (BufferedReader reader = new BufferedReader(new CharArrayReader(lex.toCharArray()))) {
-                searchAndReplace(file, fileMetadata, reader, content);
+            try (LineNumberReader reader = new LineNumberReader(new CharArrayReader(lex.toCharArray()))) {
+                searchAndReplace(file, sourcesMetadata, reader, content);
             }
 
             if (collector.isModified()) { // if added entries
                 // rewrite the imports
-                this.rewriteImports(collector, fileMetadata.importLayout().getRelevantSection(path), content);
+                this.rewriteImports(collector, file.metadata().flatMap(FileMetadata::header).orElseGet(() -> sourcesMetadata.importLayout().getRelevantHeader(path, ImportLayout.Header.DEFAULT)), content);
             }
+            destinationPath = path;
         } else {
             LOGGER.warn("Target source file '{}' doesn't exists, dumping rewriters data instead...", filePath);
-            this.setup(file, fileMetadata, new ClassNamedView(parent, 20, null), ImportCollector.NO_OP);
-            dumpAll(file, fileMetadata, content);
+            this.setup(file, sourcesMetadata, new ClassNamedView(parent, 20, null), ImportCollector.NO_OP);
+            dumpAll(file, sourcesMetadata, content);
             filePath = filePath.resolveSibling(filePath.getFileName() + ".dump");
-            path = parent.resolve(filePath);
+            destinationPath = parent.resolve(filePath);
         }
 
         if (!writeFolder.equals(parent)) { // todo remove
-            path = writeFolder.resolve(filePath);
-            Files.createDirectories(path.getParent());
+            destinationPath = writeFolder.resolve(filePath);
+            Files.createDirectories(destinationPath.getParent());
         }
-        Files.writeString(path, content, StandardCharsets.UTF_8);
+        Files.writeString(destinationPath, content, StandardCharsets.UTF_8);
     }
 
-    private void setup(SourceFile source, FileMetadata fileMetadata, ClassNamedView classNamedView, @Nullable ImportCollector importCollector) {
+    private void setup(SourceFile source, SourcesMetadata sourcesMetadata, ClassNamedView classNamedView, @Nullable ImportCollector importCollector) {
         this.getRewriters().forEach(rewriter -> {
             rewriter.source = source;
-            rewriter.fileMetadata = fileMetadata;
+            rewriter.sourcesMetadata = sourcesMetadata;
             rewriter.classNamedView = classNamedView;
             rewriter.importCollector = importCollector;
         });
     }
 
-    private void dumpAll(SourceFile file, FileMetadata fileMetadata, StringBuilder content) {
-        IndentUnit indentUnit = file.indentUnit().orElse(fileMetadata.indentUnit());
+    private void dumpAll(SourceFile file, SourcesMetadata metadata, StringBuilder content) {
+        IndentUnit indentUnit = file.metadata().flatMap(FileMetadata::indentUnit).orElse(metadata.indentUnit());
 
-        content.append("Dump of the rewriters that apply to the file : ").append(file.path());
+        content.append("Dump of the rewriters that apply to the file: ").append(file.path());
         content.append('\n');
         content.append('\n');
 
-        content.append("Configuration :");
+        content.append("Configuration:");
         content.append('\n');
-        content.append("Indent unit : \"").append(indentUnit.content()).append("\" (").append(indentUnit.size()).append(" char)");
+        content.append("Indent unit: \"").append(indentUnit.content()).append("\" (").append(indentUnit.size()).append(" char)");
         content.append('\n');
-        content.append("Indent char : '").append(indentUnit.character()).append("' (U+%04X)".formatted((int) indentUnit.character()));
+        content.append("Indent char: '").append(indentUnit.character()).append("' (U+%04X)".formatted((int) indentUnit.character()));
         content.append('\n');
 
         for (SearchReplaceRewriter rewriter : this.getRewriters()) {
@@ -108,13 +111,13 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
         }
     }
 
-    private ImportTypeCollector collectImport(SourceFile source, Lexer lexer) {
-        final ImportTypeCollector importCollector = new ImportTypeCollector(source.mainClass());
-        ImportParser.collectImports(lexer, importCollector);
+    private ImportNameCollector collectImport(SourceFile source, Lexer lexer) {
+        final ImportNameCollector importCollector = new ImportNameCollector(source.mainClass());
+        ImportParser.collectImports(lexer, importCollector, source);
         return importCollector;
     }
 
-    private void searchAndReplace(SourceFile file, FileMetadata fileMetadata, BufferedReader reader, StringBuilder content) throws IOException {
+    private void searchAndReplace(SourceFile file, SourcesMetadata metadata, LineNumberReader reader, StringBuilder content) throws IOException {
         Set<SearchReplaceRewriter> rewriters = this.getRewriters();
         Preconditions.checkState(!rewriters.isEmpty());
 
@@ -122,35 +125,36 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
         Set<SearchReplaceRewriter> unusedRewriters = new HashSet<>(rewriters);
         @Nullable StringBuilder strippedContent = null;
 
-        IndentUnit indentUnit = file.indentUnit().orElse(fileMetadata.indentUnit());
+        IndentUnit indentUnit = file.metadata().flatMap(FileMetadata::indentUnit).orElse(metadata.indentUnit());
         @Nullable String indent = null;
         @Nullable SearchReplaceRewriter foundRewriter = null;
 
-        int i = 0;
         while (true) {
             String line = reader.readLine();
             if (line == null) {
                 break;
             }
 
-            StringReader lineIterator = new StringReader(line);
             CommentMarker marker = EMPTY_MARKER;
             if (!line.isEmpty()) {
-                marker = searchMarker(
-                    lineIterator,
-                    foundRewriter == null ? null : indent,
-                    indentUnit,
-                    remainingRewriters,
-                    foundRewriter == null
-                );
+                StringReader lineIterator = new StringReader(line);
+                if (foundRewriter == null) {
+                    marker = searchStartMarker(
+                        lineIterator,
+                        indentUnit,
+                        remainingRewriters
+                    );
+                } else {
+                    marker = searchEndMarker(
+                        lineIterator,
+                        indent,
+                        foundRewriter
+                    );
+                }
             }
 
             if (marker != EMPTY_MARKER) {
                 if (foundRewriter != null) {
-                    if (!marker.owner().equals(foundRewriter)) {
-                        throw new IllegalStateException("Generated end comment doesn't match for rewriter " + foundRewriter.getName() + " in " + file.mainClass().canonicalName() + " at line " + (i + 1));
-                    }
-
                     if (!foundRewriter.options.exactReplacement()) {
                         // append generated comment
                         if (foundRewriter.options.generatedComment().isPresent()) {
@@ -158,7 +162,7 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
                             content.append('\n');
                         }
 
-                        foundRewriter.insert(new SearchMetadata(indent, strippedContent.toString(), i), content);
+                        foundRewriter.insert(new SearchMetadata(indent, strippedContent.toString(), reader.getLineNumber()), content);
                         strippedContent = null;
                     }
                     if (!foundRewriter.options.multipleOperation()) {
@@ -168,9 +172,9 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
                     foundRewriter = null;
                 } else {
                     if (marker.indentSize() % indentUnit.size() != 0) {
-                        throw new IllegalStateException("Generated start comment is not properly indented at line " + (i + 1) + " for rewriter " + marker.owner().getName() + " in " + file.mainClass().canonicalName());
+                        throw new IllegalStateException("Generated start comment is not properly indented at line %d for rewriter %s in %s".formatted(reader.getLineNumber() + 1, marker.owner().getName(), file.mainClass().canonicalName()));
                     }
-                    indent = " ".repeat(marker.indentSize()); // update indent based on the comments for flexibility
+                    indent = String.valueOf(indentUnit.character()).repeat(marker.indentSize()); // update indent based on the comments for flexibility
 
                     foundRewriter = marker.owner();
                     if (!foundRewriter.options.exactReplacement()) {
@@ -184,7 +188,7 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
                 if (foundRewriter.options.exactReplacement()) {
                     // there's no generated comment here since when the size is equals the replaced content doesn't depend on the game content
                     // if it does that means the replaced content might not be equals during MC update because of adding/removed content
-                    foundRewriter.replaceLine(new SearchMetadata(indent, line, i), content);
+                    foundRewriter.replaceLine(new SearchMetadata(indent, line, reader.getLineNumber()), content);
                 } else {
                     usedBuilder = strippedContent;
                 }
@@ -195,7 +199,6 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
                 usedBuilder.append(line);
                 usedBuilder.append('\n');
             }
-            i++;
         }
 
         if (foundRewriter != null) {
@@ -207,32 +210,22 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
         }
     }
 
-    private void rewriteImports(ImportTypeCollector collector, ImportLayout.Section layout, StringBuilder into) {
+    private void rewriteImports(ImportNameCollector collector, ImportLayout.Header header, StringBuilder into) {
         Lexer lex = new Lexer(into.toString().toCharArray());
-        TokenBlockPosition position = ImportParser.trackImportPosition(lex); // need to retrack this just in case other rewriters moved things around
-        into.replace(position.startPos.cursor(), position.endPos.cursor(), collector.writeImports(layout));
+        TokenCapture position = ImportParser.trackImportPosition(lex); // need to retrack this just in case other rewriters moved things around
+        into.replace(position.start().cursor(), position.end().cursor(), collector.writeImports(header));
     }
 
     @VisibleForTesting
-    public CommentMarker searchMarker(StringReader lineIterator, @Nullable String indent, IndentUnit indentUnit, Set<SearchReplaceRewriter> remainingRewriters, boolean searchStart) {
-        boolean strict = indent != null;
-        final int indentSize;
-        if (strict) {
-            if (!indent.isEmpty() && !lineIterator.trySkipChars(indent.length(), indent.charAt(0))) {
-                return EMPTY_MARKER;
-            }
-            indentSize = indent.length();
-        } else {
-            indentSize = lineIterator.skipChars(indentUnit.character());
-        }
-
+    public CommentMarker searchStartMarker(StringReader lineIterator, IndentUnit indentUnit, Set<SearchReplaceRewriter> remainingRewriters) {
+        int indentSize = lineIterator.skipChars(indentUnit.character());
         if (!lineIterator.trySkipString("// ")) {
             return EMPTY_MARKER;
         }
 
         @Nullable SearchReplaceRewriter result = null;
         for (SearchReplaceRewriter rewriter : remainingRewriters) {
-            boolean found = lineIterator.trySkipString(searchStart ? rewriter.options.startCommentMarker() : rewriter.options.endCommentMarker());
+            boolean found = lineIterator.trySkipString(rewriter.options.startCommentMarker());
             if (found) {
                 result = rewriter;
                 break;
@@ -244,6 +237,20 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
         }
 
         return new CommentMarker(result, indentSize);
+    }
+
+    private CommentMarker searchEndMarker(StringReader lineIterator, String indent, SearchReplaceRewriter currentRewriter) {
+        if (!indent.isEmpty() && !lineIterator.trySkipChars(indent.length(), indent.charAt(0))) {
+            return EMPTY_MARKER;
+        }
+        if (!lineIterator.trySkipString("// ")) {
+            return EMPTY_MARKER;
+        }
+        if (!lineIterator.trySkipString(currentRewriter.options.endCommentMarker()) || lineIterator.canRead()) {
+            return EMPTY_MARKER;
+        }
+
+        return new CommentMarker(currentRewriter, indent.length());
     }
 
     public abstract Set<SearchReplaceRewriter> getRewriters();

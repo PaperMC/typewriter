@@ -1,13 +1,20 @@
 package io.papermc.typewriter.parser;
 
+import io.papermc.typewriter.SourceFile;
 import io.papermc.typewriter.context.ImportCollector;
-import io.papermc.typewriter.context.ImportTypeCollector;
-import io.papermc.typewriter.parser.name.ProtoImportTypeName;
-import io.papermc.typewriter.parser.token.TokenBlockPosition;
+import io.papermc.typewriter.context.ImportNameCollector;
+import io.papermc.typewriter.parser.name.ProtoImportName;
+import io.papermc.typewriter.parser.sequence.SequenceTokens;
+import io.papermc.typewriter.parser.sequence.TokenTaskBuilder;
+import io.papermc.typewriter.parser.sequence.hook.HookType;
+import io.papermc.typewriter.parser.token.pos.TokenCapture;
+import io.papermc.typewriter.parser.token.pos.TokenRecorder;
+import io.papermc.typewriter.parser.token.PrintableToken;
 import io.papermc.typewriter.parser.token.TokenType;
 
 import java.util.EnumSet;
 import java.util.Set;
+import java.util.function.Consumer;
 
 public final class ImportParser {
 
@@ -18,49 +25,51 @@ public final class ImportParser {
         TokenType.MARKDOWN_JAVADOC
     );
 
-    public static void collectImports(Lexer lexer, ImportCollector collector) {
-        SequenceTokens.wrap(lexer, FORMAT_TOKENS)
+    public static void collectImports(Tokenizer tokenizer, ImportCollector collector, SourceFile source) {
+        SequenceTokens.wrap(tokenizer, FORMAT_TOKENS)
             .skip(TokenType.PACKAGE, action -> { // package <qualified name>;
                 action.skipQualifiedName().skip(TokenType.SECO);
-            }, SequenceTokens.TokenTask::asOptional) // for default package
+            }, TokenTaskBuilder::asOptional) // for default package
             .skip(TokenType.IMPORT, action -> {
-                ProtoImportTypeName protoImportTypeName = new ProtoImportTypeName();
+                ProtoImportName protoName = new ProtoImportName();
                 action
-                    .map(TokenType.STATIC, stat -> protoImportTypeName.asStatic(), SequenceTokens.TokenTask::asOptional)
+                    .map(TokenType.STATIC, stat -> protoName.asStatic(), TokenTaskBuilder::asOptional)
                     .mapQualifiedName(
-                        name -> protoImportTypeName.append(name.value()),
-                        dot -> protoImportTypeName.appendSeparator(),
+                        name -> protoName.append(name.value()),
+                        dot -> protoName.appendSeparator(),
                         partialAction -> partialAction
                             .map(TokenType.STAR, star -> {
-                                protoImportTypeName.popSeparator();
-                                protoImportTypeName.asGlobal();
+                                protoName.append(TokenType.STAR.value);
+                                protoName.asGlobal();
                             })
                     )
                     .map(TokenType.SECO, $ -> {
-                        ((ImportTypeCollector) collector).addProtoImport(protoImportTypeName);
+                        ((ImportNameCollector) collector).addProtoImport(protoName);
                     });
                 },
-                SequenceTokens.TokenTask::asRepeatable
+                params -> params.asOptional().asRepeatable()
             )
-            .executeOrThrow((failedTask, token) -> failedTask.createFailure("Wrong token found while collecting imports", token));
+            .executeOrThrow((failedTask, token) -> failedTask.createFailure("Wrong token found while collecting imports", token).withAdditionalContext(source));
     }
 
-    public static TokenBlockPosition trackImportPosition(Lexer lexer) {
-        TokenBlockPosition tokenPos = new TokenBlockPosition();
-        SequenceTokens.wrap(lexer, FORMAT_TOKENS)
+    public static TokenCapture trackImportPosition(Tokenizer tokenizer) {
+        TokenRecorder.Default<PrintableToken> tokenPos = TokenRecorder.BETWEEN_TOKEN.record();
+        SequenceTokens.wrap(tokenizer, FORMAT_TOKENS)
             .skip(TokenType.PACKAGE, action -> { // package <qualified name>;
                 action.skipQualifiedName().skip(TokenType.SECO);
-            }, SequenceTokens.TokenTask::asOptional) // for default package
+            }, TokenTaskBuilder::asOptional) // for default package
             .skip(TokenType.IMPORT, action -> {
                 action
-                    .skip(TokenType.STATIC, SequenceTokens.TokenTask::asOptional)
-                    .skipQualifiedName(partialAction -> partialAction.skip(TokenType.STAR))
+                    .skip(TokenType.STATIC, TokenTaskBuilder::asOptional)
+                    .skipQualifiedName((Consumer<SequenceTokens>) (partialAction) -> partialAction.skip(TokenType.STAR))
                     .map(TokenType.SECO, tokenPos::end);
                 },
-                params -> params.asRepeatable(tokenPos::begin)
+                params -> params.asOptional().asRepeatable().hooks(manager -> {
+                    manager.bind(HookType.FIRST, hook -> hook.pre(tokenPos::begin));
+                })
             )
             .executeOrThrow((failedTask, token) -> failedTask.createFailure("Wrong token found while tracking import section position", token));
-        return tokenPos;
+        return tokenPos.fetch();
     }
 
     private ImportParser() {

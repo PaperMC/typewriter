@@ -1,7 +1,7 @@
 package io.papermc.typewriter;
 
 import com.google.common.base.Preconditions;
-import io.papermc.typewriter.parser.name.ProtoImportTypeName;
+import io.papermc.typewriter.parser.name.ProtoImportName;
 import io.papermc.typewriter.util.ClassHelper;
 import javax.lang.model.SourceVersion;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -138,7 +138,7 @@ public record ClassNamed(String packageName, String simpleName, String dottedNes
             return otherType.simpleName();
         }
 
-        if (otherType.dottedNestedName().charAt(startOffset) == ProtoImportTypeName.IDENTIFIER_SEPARATOR) {
+        if (otherType.dottedNestedName().charAt(startOffset) == ProtoImportName.IDENTIFIER_SEPARATOR) {
             startOffset++;
         }
 

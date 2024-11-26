@@ -4,4 +4,4 @@ imports:
 
 staticImports:
   global:
-    - "javax.lang.model.SourceVersion"
+    - "javax.lang.model.SourceVersion.*"

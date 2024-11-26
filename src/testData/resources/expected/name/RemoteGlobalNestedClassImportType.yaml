@@ -1,4 +1,6 @@
 shortNames: {
   "name.one.OneDepthClass$NonStaticClass": "NonStaticClass",
-  "name.one.OneDepthClass$StaticClass": "StaticClass"
+  "name.one.OneDepthClass$StaticClass": "StaticClass",
+  "name.one.OneDepthClass$StaticClass$Inner": "Inner",
+  "name.one.OneDepthClass$StaticClass$Inner$Inner2": "Inner.Inner2"
 }

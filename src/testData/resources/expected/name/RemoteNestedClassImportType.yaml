@@ -3,7 +3,3 @@ shortNames: {
   "name.one.OneDepthClass$NonStaticClass$Inner": "NonStaticClass.Inner",
   "name.one.OneDepthClass$NonStaticClass2": "OneDepthClass.NonStaticClass2"
 }
-
-memberShortNames: {
-  "name.one.OneDepthClass.StaticClass": "StaticClass"
-}

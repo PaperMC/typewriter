@@ -1,12 +1,12 @@
 package io.papermc.typewriter.parser.exception;
 
-import io.papermc.typewriter.parser.token.Token;
+import io.papermc.typewriter.parser.token.PrintableToken;
 
 public class ParserException extends ReaderException {
 
-    private final Token badToken;
+    private final PrintableToken badToken;
 
-    public ParserException(String message, Token badToken) {
+    public ParserException(String message, PrintableToken badToken) {
         super(message);
         this.badToken = badToken;
     }

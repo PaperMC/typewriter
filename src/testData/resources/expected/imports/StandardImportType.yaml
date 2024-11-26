@@ -3,10 +3,10 @@ imports:
     - "java.util.List"
     - "java.util.random.RandomGenerator.JumpableGenerator"
   global:
-    - "java.util"
+    - "java.util.*"
 
 staticImports:
   single:
     - "javax.lang.model.SourceVersion.RELEASE_21"
   global:
-    - "javax.lang.model.SourceVersion"
+    - "javax.lang.model.SourceVersion.*"

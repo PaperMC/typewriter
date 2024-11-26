@@ -7,11 +7,15 @@ public interface ImportCollector {
     ImportCollector NO_OP = new ImportCollector() { // only used for dump
 
         @Override
-        public void addImport(String typeName) {
+        public void addImport(ClassNamed type) {
         }
 
         @Override
-        public void addStaticImport(String fullName) {
+        public void addImport(String name) {
+        }
+
+        @Override
+        public void addStaticImport(String name) {
         }
 
         @Override
@@ -20,8 +24,8 @@ public interface ImportCollector {
         }
 
         @Override
-        public String getStaticMemberShortName(String fullName) {
-            return fullName;
+        public String getStaticMemberShortName(String packageName, String memberName) {
+            return ImportName.dotJoin(packageName, memberName);
         }
 
         @Override
@@ -30,13 +34,19 @@ public interface ImportCollector {
         }
     };
 
-    void addImport(String typeName);
+    default void addImport(Class<?> type) {
+        this.addImport(new ClassNamed(type));
+    }
 
-    void addStaticImport(String fullName);
+    void addImport(ClassNamed type);
+
+    void addImport(String name);
+
+    void addStaticImport(String name);
 
     boolean canImportSafely(ClassNamed type);
 
-    String getStaticMemberShortName(String fullName);
+    String getStaticMemberShortName(String packageName, String memberName);
 
     default String getShortName(Class<?> type) {
         return this.getShortName(new ClassNamed(type));

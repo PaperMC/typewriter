@@ -11,9 +11,9 @@ public enum TokenType {
     FINAL("final"),
     INTERFACE("interface"),
     // literals
-    CHAR("'"),
-    STRING("\""),
-    PARAGRAPH("\"\"\""),
+    CHAR(null),
+    STRING(null),
+    PARAGRAPH(null),
     // punctuation marks
     LPAREN("("),
     RPAREN(")"),
@@ -35,14 +35,14 @@ public enum TokenType {
     IDENTIFIER(null),
     EOI(null);
 
-    public final String name;
-    TokenType(String name) {
-        this.name = name;
+    public final String value;
+    TokenType(String value) {
+        this.value = value;
     }
 
-    public static TokenType fromName(String name, TokenType def) {
+    public static TokenType fromValue(String value, TokenType def) {
         for (TokenType type : TokenType.values()) {
-            if (type.name != null && type.name.equals(name)) {
+            if (type.value != null && type.value.equals(value)) {
                 return type;
             }
         }

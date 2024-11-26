@@ -1,7 +1,7 @@
 package io.papermc.typewriter.preset.model;
 
 import com.google.common.base.Preconditions;
-import io.papermc.typewriter.IndentUnit;
+import io.papermc.typewriter.context.IndentUnit;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.jetbrains.annotations.Contract;

@@ -1,6 +1,6 @@
 package io.papermc.typewriter.preset.model;
 
-import io.papermc.typewriter.IndentUnit;
+import io.papermc.typewriter.context.IndentUnit;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.jetbrains.annotations.Contract;
 

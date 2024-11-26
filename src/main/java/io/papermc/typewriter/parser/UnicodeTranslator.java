@@ -2,7 +2,7 @@ package io.papermc.typewriter.parser;
 
 import io.papermc.typewriter.parser.exception.LexerException;
 
-public class UnicodeTranslator {
+public abstract class UnicodeTranslator {
     private final char[] input;
 
     protected int charSize = 1; // char size representation in the buffer (size of the escape), surrogate pair are handled
@@ -12,11 +12,11 @@ public class UnicodeTranslator {
     private int column; // character count (0-indexed) after unicode translation
     private int row = 1; // line count
 
-    public UnicodeTranslator(char[] input) {
+    protected UnicodeTranslator(char[] input) {
         this.input = input;
     }
 
-    public boolean match(char c) {
+    protected boolean match(char c) {
         if (this.canRead() && this.peek() == c) {
             this.incrCursor();
             return true;
@@ -25,7 +25,7 @@ public class UnicodeTranslator {
         return false;
     }
 
-    public boolean match(String str) {
+    protected boolean match(String str) {
         int size = str.length();
         if (!this.canRead(size)) {
             return false;
@@ -48,12 +48,12 @@ public class UnicodeTranslator {
         return true;
     }
 
-    public void incrCursor() {
+    protected void incrCursor() {
         this.cursor += this.charSize;
         this.column++;
     }
 
-    public char read() {
+    protected char read() {
         if (!this.canRead()) {
             throw new LexerException("Expected to read a new character", this);
         }
@@ -62,7 +62,7 @@ public class UnicodeTranslator {
         return c;
     }
 
-    public char peek() {
+    protected char peek() {
         return this.peek(0);
     }
 
@@ -103,7 +103,7 @@ public class UnicodeTranslator {
         return c; // other escape
     }
 
-    public int peekPoint() {
+    protected int peekPoint() {
         char hi = this.peek();
         int size = this.charSize;
         this.codePointCache[0] = hi;
@@ -154,10 +154,15 @@ public class UnicodeTranslator {
         return c == '\n' || c == '\r';
     }
 
-    public void skipLineTerm() {
+    protected void skipLineTerm() {
         match('\r');
         match('\n');
         this.visitLineTerminator();
+    }
+
+    protected void visitLineTerminator() {
+        this.row++;
+        this.column = 0;
     }
 
     protected boolean isUnicodeEscape() {
@@ -166,11 +171,6 @@ public class UnicodeTranslator {
 
     public int getCursor() {
         return this.cursor;
-    }
-
-    protected void visitLineTerminator() {
-        this.row++;
-        this.column = 0;
     }
 
     public int getColumn() {
