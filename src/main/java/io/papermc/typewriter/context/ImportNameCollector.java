@@ -131,7 +131,7 @@ public class ImportNameCollector implements ImportCollector {
 
     public String writeImports(ImportLayout.Header header) {
         StringBuilder builder = new StringBuilder();
-        List<ImportName> addedImports = new ArrayList<>(this.importMap.getImports());
+        List<ImportName> addedImports = new ArrayList<>(this.importMap.entries());
         header.sortImportsInto(builder, addedImports);
         return builder.toString();
     }

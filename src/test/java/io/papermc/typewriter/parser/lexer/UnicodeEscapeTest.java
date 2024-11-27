@@ -4,10 +4,12 @@ import io.papermc.typewriter.parser.ParserTest;
 import io.papermc.typewriter.parser.token.CharSequenceToken;
 import io.papermc.typewriter.parser.token.Token;
 import io.papermc.typewriter.parser.token.TokenType;
+import javax.lang.model.element.Modifier;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
+import static io.papermc.typewriter.parser.ParserAssertions.assertIdentifier;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
@@ -15,12 +17,12 @@ public class UnicodeEscapeTest extends ParserTest {
 
     @Test
     public void testString() throws IOException {
-        parseJava(CONTAINER.resolve("lexer/UnicodeEscapes.java"), 8, lexer -> {
+        parseJavaFile(CONTAINER.resolve("lexer/UnicodeEscapes.java"), Modifier.PUBLIC, "class", lexer -> {
             CharSequenceToken identifierToken = lexer.nextToken(CharSequenceToken.class);
-            assertIdentifier(identifierToken, 8, TokenType.IDENTIFIER, "String");
+            assertIdentifier(identifierToken, 8, "String");
 
             CharSequenceToken identifierToken2 = lexer.nextToken(CharSequenceToken.class);
-            assertIdentifier(identifierToken2, 8 + "String".length() + 1, TokenType.IDENTIFIER, "abc");
+            assertIdentifier(identifierToken2, 8 + "String".length() + 1, "abc");
 
             CharSequenceToken stringToken = lexer.nextToken(CharSequenceToken.class);
             String expectedValue = "some string";

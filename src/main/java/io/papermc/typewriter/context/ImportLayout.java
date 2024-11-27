@@ -178,7 +178,7 @@ public class ImportLayout {
 
         private static void writeImport(StringBuilder builder, ImportName type) {
             builder.append("import ");
-            if (type instanceof ImportName.Static) {
+            if (type.category() == ImportCategory.STATIC) {
                 builder.append("static ");
             }
             builder.append(type.name());

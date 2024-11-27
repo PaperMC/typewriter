@@ -5,11 +5,13 @@ import io.papermc.typewriter.parser.token.CharSequenceBlockToken;
 import io.papermc.typewriter.parser.token.CharSequenceToken;
 import io.papermc.typewriter.parser.token.Token;
 import io.papermc.typewriter.parser.token.TokenType;
+import javax.lang.model.element.Modifier;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.List;
 
+import static io.papermc.typewriter.parser.ParserAssertions.assertIdentifier;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
@@ -22,10 +24,10 @@ public class StringTest extends ParserTest {
                 """,
             lexer -> {
                 CharSequenceToken identifierToken = lexer.nextToken(CharSequenceToken.class);
-                assertIdentifier(identifierToken, 0, TokenType.IDENTIFIER, "String");
+                assertIdentifier(identifierToken, 0, "String");
 
                 CharSequenceToken identifierToken2 = lexer.nextToken(CharSequenceToken.class);
-                assertIdentifier(identifierToken2, "String".length() + 1, TokenType.IDENTIFIER, "abc");
+                assertIdentifier(identifierToken2, "String".length() + 1, "abc");
 
                 CharSequenceToken stringToken = lexer.nextToken(CharSequenceToken.class);
                 String expectedValue = "regular string";
@@ -41,12 +43,12 @@ public class StringTest extends ParserTest {
 
     @Test
     public void testStringEscape() throws IOException {
-        parseJava(CONTAINER.resolve("lexer/StringEscapes.java"), 8, lexer -> {
+        parseJavaFile(CONTAINER.resolve("lexer/StringEscapes.java"), Modifier.PUBLIC, "class", lexer -> {
             CharSequenceToken identifierToken = lexer.nextToken(CharSequenceToken.class);
-            assertIdentifier(identifierToken, 8, TokenType.IDENTIFIER, "String");
+            assertIdentifier(identifierToken, 8, "String");
 
             CharSequenceToken identifierToken2 = lexer.nextToken(CharSequenceToken.class);
-            assertIdentifier(identifierToken2, 8 + "String".length() + 1, TokenType.IDENTIFIER, "abc");
+            assertIdentifier(identifierToken2, 8 + "String".length() + 1, "abc");
 
             CharSequenceToken stringToken = lexer.nextToken(CharSequenceToken.class);
             String expectedValue = "\tsome \"string\"\\\n";
@@ -62,12 +64,12 @@ public class StringTest extends ParserTest {
 
     @Test
     public void testSurrogatePair() throws IOException {
-        parseJava(CONTAINER.resolve("lexer/SurrogatePair.java"), 8, lexer -> {
+        parseJavaFile(CONTAINER.resolve("lexer/SurrogatePair.java"), Modifier.PUBLIC, "class", lexer -> {
             CharSequenceToken identifierToken = lexer.nextToken(CharSequenceToken.class);
-            assertIdentifier(identifierToken, 8, TokenType.IDENTIFIER, "String");
+            assertIdentifier(identifierToken, 8, "String");
 
             CharSequenceToken identifierToken2 = lexer.nextToken(CharSequenceToken.class);
-            assertIdentifier(identifierToken2, 8 + "String".length() + 1, TokenType.IDENTIFIER, "abc");
+            assertIdentifier(identifierToken2, 8 + "String".length() + 1, "abc");
 
             CharSequenceToken stringToken = lexer.nextToken(CharSequenceToken.class);
             String expectedValue = "𝄞𝄞";
@@ -88,10 +90,10 @@ public class StringTest extends ParserTest {
                 """,
             lexer -> {
                 CharSequenceToken identifierToken = lexer.nextToken(CharSequenceToken.class);
-                assertIdentifier(identifierToken, 0, TokenType.IDENTIFIER, "char");
+                assertIdentifier(identifierToken, 0, "char");
 
                 CharSequenceToken identifierToken2 = lexer.nextToken(CharSequenceToken.class);
-                assertIdentifier(identifierToken2, "char".length() + 1, TokenType.IDENTIFIER, "abc");
+                assertIdentifier(identifierToken2, "char".length() + 1, "abc");
 
                 CharSequenceToken charToken = lexer.nextToken(CharSequenceToken.class);
                 String expectedValue = "a";
@@ -112,10 +114,10 @@ public class StringTest extends ParserTest {
                 """,
             lexer -> {
                 CharSequenceToken identifierToken = lexer.nextToken(CharSequenceToken.class);
-                assertIdentifier(identifierToken, 0, TokenType.IDENTIFIER, "char");
+                assertIdentifier(identifierToken, 0, "char");
 
                 CharSequenceToken identifierToken2 = lexer.nextToken(CharSequenceToken.class);
-                assertIdentifier(identifierToken2, "char".length() + 1, TokenType.IDENTIFIER, "abc");
+                assertIdentifier(identifierToken2, "char".length() + 1, "abc");
 
                 String expectedValue = "'";
                 CharSequenceToken charToken = lexer.nextToken(CharSequenceToken.class);
@@ -139,10 +141,10 @@ public class StringTest extends ParserTest {
                 """,
             lexer -> {
                 CharSequenceToken identifierToken = lexer.nextToken(CharSequenceToken.class);
-                assertIdentifier(identifierToken, 0, TokenType.IDENTIFIER, "String");
+                assertIdentifier(identifierToken, 0, "String");
 
                 CharSequenceToken identifierToken2 = lexer.nextToken(CharSequenceToken.class);
-                assertIdentifier(identifierToken2, "String".length() + 1, TokenType.IDENTIFIER, "abc");
+                assertIdentifier(identifierToken2, "String".length() + 1, "abc");
 
                 CharSequenceBlockToken textBlockToken = lexer.nextToken(CharSequenceBlockToken.class);
                 assertSame(TokenType.PARAGRAPH, textBlockToken.type());
@@ -157,13 +159,13 @@ public class StringTest extends ParserTest {
 
     @Test
     public void testTextBlockEscapes() throws IOException {
-        parseJava(CONTAINER.resolve("lexer/TextBlockEscapes.java"), 8,
+        parseJavaFile(CONTAINER.resolve("lexer/TextBlockEscapes.java"), Modifier.PUBLIC, "class",
             lexer -> {
                 CharSequenceToken identifierToken = lexer.nextToken(CharSequenceToken.class);
-                assertIdentifier(identifierToken, 8, TokenType.IDENTIFIER, "String");
+                assertIdentifier(identifierToken, 8, "String");
 
                 CharSequenceToken identifierToken2 = lexer.nextToken(CharSequenceToken.class);
-                assertIdentifier(identifierToken2, 8 + "String".length() + 1, TokenType.IDENTIFIER, "abc");
+                assertIdentifier(identifierToken2, 8 + "String".length() + 1, "abc");
 
                 CharSequenceBlockToken textBlockToken = lexer.nextToken(CharSequenceBlockToken.class);
                 assertSame(TokenType.PARAGRAPH, textBlockToken.type());

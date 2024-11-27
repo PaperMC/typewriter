@@ -14,11 +14,11 @@ import static io.papermc.typewriter.parser.name.ProtoQualifiedName.IDENTIFIER_SE
 
 public class ImportNameMap {
 
-    private final Set<ImportName> allSet = new LinkedHashSet<>();
+    private final Set<ImportName> entries = new LinkedHashSet<>();
     private final Map<ImportCategory, Set<ImportName>> names = new EnumMap<>(ImportCategory.class);
 
     public boolean add(ImportName name) {
-        if (this.allSet.add(name)) {
+        if (this.entries.add(name)) {
             this.names.computeIfAbsent(name.category(), category -> new HashSet<>()).add(name);
             return true;
         }
@@ -26,7 +26,7 @@ public class ImportNameMap {
     }
 
     public boolean remove(ImportName name) {
-        if (this.allSet.remove(name)) {
+        if (this.entries.remove(name)) {
             Set<ImportName> names = this.names.get(name.category());
             names.remove(name);
             if (names.isEmpty()) {
@@ -43,7 +43,7 @@ public class ImportNameMap {
 
     public boolean canImportSafely(ClassNamed type) {
         if (this.names.containsKey(ImportCategory.TYPE)) {
-            for (ImportName name : this.get(ImportCategory.TYPE)) {
+            for (ImportName name : this.names.get(ImportCategory.TYPE)) {
                 if (name.isGlobal()) {
                     continue;
                 }
@@ -56,7 +56,7 @@ public class ImportNameMap {
 
         // while this is not always required it ensure clarity of the source file
         if (this.names.containsKey(ImportCategory.STATIC)) {
-            for (ImportName name : this.get(ImportCategory.STATIC)) {
+            for (ImportName name : this.names.get(ImportCategory.STATIC)) {
                 if (name.isGlobal()) {
                     continue;
                 }
@@ -114,7 +114,7 @@ public class ImportNameMap {
         return fullName;
     }
 
-    public Set<ImportName> getImports() {
-        return this.allSet;
+    public Set<ImportName> entries() {
+        return this.entries;
     }
 }

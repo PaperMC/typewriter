@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 /**
@@ -49,22 +50,27 @@ public class ClassNamedView {
     }
 
     public ClassNamed findFirst(String name) {
-        int dotIndex = name.indexOf('.');
-        if (dotIndex != -1) { // take in account nested names
-            ClassNamed clazz = this.findFirstFile(name.substring(0, dotIndex)).mainClass();
-            return ClassNamed.of(
-                clazz.packageName(),
-                clazz.simpleName(),
-                name.substring(dotIndex + 1).split("\\.")
-            );
-        }
-
-        return this.findFirstFile(name).mainClass();
+        return this.tryFindFirst(name).orElseThrow();
     }
 
-    public SourceFile findFirstFile(String name) {
-        try (Stream<SourceFile> stream = this.findFile(name)) { // handle conflict?
-            return stream.findFirst().orElseThrow();
+    public Optional<ClassNamed> tryFindFirst(String name) {
+        int dotIndex = name.indexOf('.');
+        if (dotIndex != -1) { // take in account nested names
+            return this.findFirstFile(name.substring(0, dotIndex))
+                .map(SourceFile::mainClass)
+                .map(clazz -> ClassNamed.of(
+                    clazz.packageName(),
+                    clazz.simpleName(),
+                    name.substring(dotIndex + 1).split("\\.")
+                ));
+        }
+
+        return this.findFirstFile(name).map(SourceFile::mainClass);
+    }
+
+    public Optional<SourceFile> findFirstFile(String name) {
+        try (Stream<SourceFile> stream = this.findFile(name)) { // handle conflict
+            return stream.findFirst();
         }
     }
 

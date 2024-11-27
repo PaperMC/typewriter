@@ -162,7 +162,7 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
                             content.append('\n');
                         }
 
-                        foundRewriter.insert(new SearchMetadata(indent, strippedContent.toString(), reader.getLineNumber()), content);
+                        foundRewriter.insert(new SearchMetadata(indent, strippedContent.toString(), reader.getLineNumber() - 1), content);
                         strippedContent = null;
                     }
                     if (!foundRewriter.options.multipleOperation()) {
@@ -172,7 +172,7 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
                     foundRewriter = null;
                 } else {
                     if (marker.indentSize() % indentUnit.size() != 0) {
-                        throw new IllegalStateException("Generated start comment is not properly indented at line %d for rewriter %s in %s".formatted(reader.getLineNumber() + 1, marker.owner().getName(), file.mainClass().canonicalName()));
+                        throw new IllegalStateException("Generated start comment is not properly indented at line %d for rewriter %s in %s".formatted(reader.getLineNumber(), marker.owner().getName(), file.mainClass().canonicalName()));
                     }
                     indent = String.valueOf(indentUnit.character()).repeat(marker.indentSize()); // update indent based on the comments for flexibility
 
@@ -188,7 +188,7 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
                 if (foundRewriter.options.exactReplacement()) {
                     // there's no generated comment here since when the size is equals the replaced content doesn't depend on the game content
                     // if it does that means the replaced content might not be equals during MC update because of adding/removed content
-                    foundRewriter.replaceLine(new SearchMetadata(indent, line, reader.getLineNumber()), content);
+                    foundRewriter.replaceLine(new SearchMetadata(indent, line, reader.getLineNumber() - 1), content);
                 } else {
                     usedBuilder = strippedContent;
                 }

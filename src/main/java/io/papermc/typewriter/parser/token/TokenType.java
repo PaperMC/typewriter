@@ -21,6 +21,8 @@ public enum TokenType {
     RSCOPE("}"),
     LBRACKET("["),
     RBRACKET("]"),
+    LT("<"),
+    GT(">"),
     DOT("."),
     SECO(";"),
     CO(","),

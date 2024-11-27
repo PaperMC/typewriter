@@ -524,6 +524,16 @@ public class Lexer extends UnicodeTranslator implements Tokenizer {
                     singlePos = snapshot.take(this);
                     this.incrCursor();
                     break loop;
+                case '<':
+                    type = TokenType.LT;
+                    singlePos = snapshot.take(this);
+                    this.incrCursor();
+                    break loop;
+                case '>':
+                    type = TokenType.GT;
+                    singlePos = snapshot.take(this);
+                    this.incrCursor();
+                    break loop;
                 case '@':
                     type = TokenType.AT_SIGN;
                     singlePos = snapshot.take(this);

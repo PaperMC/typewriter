@@ -155,7 +155,11 @@ public class SequenceTokens {
     }
 
     public SequenceTokens skipClosure(TokenType open, TokenType close, boolean nested) {
-        this.expectedTokens.offer(newTask(new SkipClosureAction(open, close, nested)));
+        return this.skipClosure(open, close, nested, UnaryOperator.identity());
+    }
+
+    public SequenceTokens skipClosure(TokenType open, TokenType close, boolean nested, UnaryOperator<TokenTaskBuilder> parameters) {
+        this.expectedTokens.offer(newTask(new SkipClosureAction(open, close, nested), parameters));
         return this;
     }
 
@@ -166,6 +170,12 @@ public class SequenceTokens {
     public boolean executeOrThrow(BiFunction<TokenTaskThrowable, PrintableToken, Exception> failure) {
         return this.execute(failedTask -> {
             throw new RuntimeException(failure.apply(failedTask, (PrintableToken) this.iterator.peekPrevious()));
+        });
+    }
+
+    public boolean executeOrThrow() {
+        return this.execute(failedTask -> {
+            throw new RuntimeException(failedTask.createFailure("Unexpected token found or a task failed to execute", (PrintableToken) this.iterator.peekPrevious()));
         });
     }
 
@@ -196,7 +206,7 @@ public class SequenceTokens {
                 boolean success = task.run(token, this);
                 task.runHook(HookType.EVERY, hook -> hook.post().call(token));
 
-                if (!task.isRepeatable() || (!success && (alreadyRan || task.isOptional()))) {
+                if (!task.isRepeatable() || (success ? (alreadyRan && !this.iterator.hasNext()) : (alreadyRan || task.isOptional()))) {
                     if (task.isRepeatable()) {
                         task.runHook(HookType.LAST, hook -> hook.post().call(token));
                     }
@@ -315,6 +325,7 @@ public class SequenceTokens {
 
             NavigableToken iterator = executor.iterator();
             boolean expectDot = true;
+            Integer expectNToken = null;
             Token lastToken = token;
             while (iterator.hasNext()) {
                 PrintableToken currentToken = (PrintableToken) iterator.next();
@@ -324,12 +335,28 @@ public class SequenceTokens {
 
                 if (currentToken.type() != (expectDot ? TokenType.DOT : TokenType.IDENTIFIER)) {
                     iterator.previous();
+                    if (expectNToken == null && !expectDot && this.partialAction != null && currentToken.type() == TokenType.AT_SIGN) { // annotation inside qn
+                        if (!executor.executeSub(this.partialAction)) {
+                            return false;
+                        } else {
+                            expectNToken = 1;
+                            continue;
+                        }
+                    }
                     break;
                 }
                 lastToken = currentToken;
 
                 if (!expectDot && SourceVersion.isKeyword(((CharSequenceToken) currentToken).value())) { // invalid name
                     return false;
+                }
+
+                if (expectNToken != null) {
+                    if (expectNToken > 0) {
+                        expectNToken--;
+                    } else {
+                        return false;
+                    }
                 }
 
                 if (expectDot) {
@@ -344,7 +371,7 @@ public class SequenceTokens {
                 return true;
             }
 
-            if (this.partialAction != null && lastToken.type() == TokenType.DOT) {
+            if (this.partialAction != null && lastToken.type() == TokenType.DOT) { // .*
                 return executor.executeSub(this.partialAction);
             }
             return false;

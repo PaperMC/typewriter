@@ -6,6 +6,9 @@ import io.papermc.typewriter.parser.token.Token;
 import io.papermc.typewriter.parser.token.TokenType;
 import org.junit.jupiter.api.Test;
 
+import static io.papermc.typewriter.parser.ParserAssertions.assertIdentifier;
+import static io.papermc.typewriter.parser.ParserAssertions.assertKeyword;
+import static io.papermc.typewriter.parser.ParserAssertions.assertNIdentifier;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 public class ImportAnnotTest extends ParserTest {
@@ -109,7 +112,7 @@ public class ImportAnnotTest extends ParserTest {
                 assertSame(TokenType.INTERFACE, interfaceToken.type());
 
                 CharSequenceToken identifierToken = lexer.nextToken(CharSequenceToken.class);
-                assertIdentifier(identifierToken, TokenType.PUBLIC.value.length() + 1 + TokenType.AT_SIGN.value.length() + TokenType.INTERFACE.value.length() + 1, TokenType.IDENTIFIER, "Test");
+                assertIdentifier(identifierToken, TokenType.PUBLIC.value.length() + 1 + TokenType.AT_SIGN.value.length() + TokenType.INTERFACE.value.length() + 1, "Test");
 
                 Token openBracket = lexer.nextToken();
                 assertSame(TokenType.LSCOPE, openBracket.type());
@@ -131,7 +134,7 @@ public class ImportAnnotTest extends ParserTest {
                 assertSame(TokenType.AT_SIGN, atToken.type());
 
                 CharSequenceToken annotationNameToken = lexer.nextToken(CharSequenceToken.class);
-                assertIdentifier(annotationNameToken, 1, TokenType.IDENTIFIER, "Test");
+                assertIdentifier(annotationNameToken, 1, "Test");
 
                 CharSequenceToken publicToken = lexer.nextToken(CharSequenceToken.class);
                 assertKeyword(publicToken, 0, TokenType.PUBLIC);
@@ -140,10 +143,10 @@ public class ImportAnnotTest extends ParserTest {
                 assertKeyword(finalToken, TokenType.PUBLIC.value.length() + 1, TokenType.FINAL);
 
                 CharSequenceToken classToken = lexer.nextToken(CharSequenceToken.class);
-                assertIdentifier(classToken, TokenType.PUBLIC.value.length() + 1 + TokenType.FINAL.value.length() + 1, TokenType.IDENTIFIER, "class");
+                assertIdentifier(classToken, TokenType.PUBLIC.value.length() + 1 + TokenType.FINAL.value.length() + 1, "class");
 
                 CharSequenceToken identifierToken = lexer.nextToken(CharSequenceToken.class);
-                assertIdentifier(identifierToken, TokenType.PUBLIC.value.length() + 1 + TokenType.FINAL.value.length() + 1 + "class".length() + 1, TokenType.IDENTIFIER, "Api");
+                assertIdentifier(identifierToken, TokenType.PUBLIC.value.length() + 1 + TokenType.FINAL.value.length() + 1 + "class".length() + 1, "Api");
 
                 Token openBracket = lexer.nextToken();
                 assertSame(TokenType.LSCOPE, openBracket.type());
