@@ -20,16 +20,16 @@ repositories {
 val testData = sourceSets.create("testData")
 
 dependencies {
-    implementation("com.google.guava:guava:33.2.1-jre")
-    implementation("org.apache.logging.log4j:log4j-core:2.23.1")
-    implementation("org.slf4j:slf4j-api:2.0.13")
+    implementation("com.google.guava:guava:33.3.1-jre")
+    implementation("org.apache.logging.log4j:log4j-core:2.24.2")
+    implementation("org.slf4j:slf4j-api:2.0.16")
 
-    compileOnly("org.checkerframework:checker-qual:3.45.0")
-    compileOnly("org.jetbrains:annotations:24.1.0")
+    compileOnly("org.checkerframework:checker-qual:3.48.3")
+    compileOnly("org.jetbrains:annotations:26.0.1")
 
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.3")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.11.3")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-    testImplementation("org.yaml:snakeyaml:2.2")
+    testImplementation("org.yaml:snakeyaml:2.3")
     testImplementation(testData.output)
 }
 
