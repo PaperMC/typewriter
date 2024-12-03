@@ -32,7 +32,6 @@ public enum TokenType {
     COMMENT(null),
     SINGLE_COMMENT(null),
     JAVADOC(null),
-    @ApiStatus.Experimental
     MARKDOWN_JAVADOC(null),
     IDENTIFIER(null),
     EOI(null);

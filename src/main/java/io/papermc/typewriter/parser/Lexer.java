@@ -11,7 +11,6 @@ import io.papermc.typewriter.parser.token.CharToken;
 import io.papermc.typewriter.parser.token.Token;
 import io.papermc.typewriter.parser.token.TokenType;
 import org.checkerframework.checker.nullness.qual.Nullable;
-import org.jetbrains.annotations.ApiStatus;
 
 import java.io.CharArrayWriter;
 import java.io.IOException;
@@ -22,6 +21,8 @@ import java.util.List;
 import java.util.Set;
 
 public class Lexer extends UnicodeTranslator implements Tokenizer {
+
+    private static final boolean CHECK_MARKDOWN_DOC_COMMENTS = !Boolean.getBoolean("typewriter.lexer.ignoreMarkdownDocComments");
 
     private final StringBuilder buffer; // generic buffer for single line element or used as temporary storage before being pushed into line buffer
     private final List<String> lineBuffer; // line buffer for multi line block
@@ -304,7 +305,6 @@ public class Lexer extends UnicodeTranslator implements Tokenizer {
 
     /// markdown
     /// javadoc `sparkl`
-    @ApiStatus.Experimental
     private void readMarkdownJavadoc(TokenRecorder.Constant tokenPos) { // JEP 467
         boolean expectPrefix = false; // first prefix is already checked before
         while (this.canRead()) {
@@ -448,7 +448,7 @@ public class Lexer extends UnicodeTranslator implements Tokenizer {
                     tokenPos.begin();
                     this.incrCursor();
                     if (match('/')) {
-                        if (match('/')) {
+                        if (CHECK_MARKDOWN_DOC_COMMENTS && match('/')) {
                             type = TokenType.MARKDOWN_JAVADOC;
                             this.readMarkdownJavadoc(tokenPos);
                         } else {
