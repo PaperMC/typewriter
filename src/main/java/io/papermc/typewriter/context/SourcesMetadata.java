@@ -1,7 +1,10 @@
 package io.papermc.typewriter.context;
 
+import io.papermc.typewriter.context.layout.ImportLayout;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.framework.qual.DefaultQualifier;
+
+import java.util.Collections;
 
 /**
  * A file metadata for all source files registered through a {@link io.papermc.typewriter.registration.SourceSetRewriter}.

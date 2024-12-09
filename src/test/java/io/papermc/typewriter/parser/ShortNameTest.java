@@ -9,8 +9,10 @@ import name.GlobalImportType;
 import name.PackageClassImportType;
 import name.RegularImportType;
 import name.RemoteGlobalNestedClassImportType;
+import name.RemoteModuleImportType;
 import name.RemoteNestedClassImportType;
 import name.RemoteGlobalStaticNestedClassImportType;
+import name.RemoteNestedStaticClassImportType;
 import name.SelfInnerClass;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.converter.ConvertWith;
@@ -48,7 +50,9 @@ public class ShortNameTest extends ParserTest {
             rootClass(PackageClassImportType.class),
             rootClass(RemoteGlobalNestedClassImportType.class),
             rootClass(RemoteGlobalStaticNestedClassImportType.class),
-            rootClass(RemoteNestedClassImportType.class)
+            rootClass(RemoteModuleImportType.class),
+            rootClass(RemoteNestedClassImportType.class),
+            rootClass(RemoteNestedStaticClassImportType.class)
         );
     }
 
@@ -68,7 +72,7 @@ public class ShortNameTest extends ParserTest {
                 String typeName = expect.getKey();
                 Class<?> runtimeClass = assertDoesNotThrow(() -> Class.forName(typeName), "Runtime class is unknown for import " + typeName);
                 assertEquals(expect.getValue(), importCollector.getShortName(runtimeClass, false),
-                    () -> "Short name of " + typeName + " doesn't match with collected imports for " + name + "! Import found: " + importCollector.getImportMap().get(ImportCategory.TYPE));
+                    () -> "Short name of %s doesn't match with collected imports for %s! Import found: T = %s M = %s".formatted(typeName, name, importCollector.getImportMap().get(ImportCategory.TYPE), importCollector.getImportMap().get(ImportCategory.MODULE)));
             }
         }
 

@@ -4,8 +4,8 @@ import io.papermc.typewriter.ClassNamed;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.Collections;
-import java.util.EnumMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
@@ -15,7 +15,7 @@ import static io.papermc.typewriter.parser.name.ProtoQualifiedName.IDENTIFIER_SE
 public class ImportNameMap {
 
     private final Set<ImportName> entries = new LinkedHashSet<>();
-    private final Map<ImportCategory, Set<ImportName>> names = new EnumMap<>(ImportCategory.class);
+    private final Map<ImportCategory<?>, Set<ImportName>> names = new IdentityHashMap<>();
 
     public boolean add(ImportName name) {
         if (this.entries.add(name)) {
@@ -37,44 +37,41 @@ public class ImportNameMap {
         return false;
     }
 
-    public Set<ImportName> get(ImportCategory category) {
-        return this.names.getOrDefault(category, Collections.emptySet());
+    @SuppressWarnings("unchecked")
+    public <T extends ImportName> Set<T> get(ImportCategory<T> category) {
+        return (Set<T>) this.names.getOrDefault(category, Collections.emptySet());
     }
 
     public boolean canImportSafely(ClassNamed type) {
-        if (this.names.containsKey(ImportCategory.TYPE)) {
-            for (ImportName name : this.names.get(ImportCategory.TYPE)) {
-                if (name.isGlobal()) {
-                    continue;
-                }
+        for (ImportName.Type name : this.get(ImportCategory.TYPE)) {
+            if (name.isGlobal()) {
+                continue;
+            }
 
-                if (type.simpleName().equals(name.id())) {
-                    return false;
-                }
+            if (type.simpleName().equals(name.id())) {
+                return false;
             }
         }
 
         // while this is not always required it ensure clarity of the source file
-        if (this.names.containsKey(ImportCategory.STATIC)) {
-            for (ImportName name : this.names.get(ImportCategory.STATIC)) {
-                if (name.isGlobal()) {
-                    continue;
-                }
+        for (ImportName.Static name : this.get(ImportCategory.STATIC)) {
+            if (name.isGlobal()) {
+                continue;
+            }
 
-                if (type.simpleName().equals(name.id())) {
-                    return false;
-                }
+            if (type.simpleName().equals(name.id())) {
+                return false;
             }
         }
 
         return true;
     }
 
-    public ImportSet asSet(ImportCategory category) {
+    public <T extends ImportName.Identified> ImportSet asSet(ImportCategory<T> category) {
         Set<String> single = new HashSet<>();
         Set<String> global = new HashSet<>();
-        Set<ImportName> names = this.get(category);
-        for (ImportName type : names) {
+        Set<T> names = this.get(category);
+        for (T type : names) {
             if (type.isGlobal()) {
                 global.add(type.name());
             } else {
@@ -95,12 +92,11 @@ public class ImportNameMap {
     public String getStaticMemberName(String packageName, String memberName) {
         String fullName = ImportName.dotJoin(packageName, memberName);
         String originalName = memberName;
-        Set<ImportName> names = this.get(ImportCategory.STATIC);
+        Set<ImportName.Static> names = this.get(ImportCategory.STATIC);
         while (true) {
-            for (ImportName name : names) {
-                ImportName.Static stat = (ImportName.Static) name;
-                if (stat.isMemberImported(packageName, memberName)) {
-                    return stat.resolveMemberName(packageName, originalName);
+            for (ImportName.Static name : names) {
+                if (name.isMemberImported(packageName, memberName)) {
+                    return name.resolveMemberName(packageName, originalName);
                 }
             }
 
