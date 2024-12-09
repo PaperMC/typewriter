@@ -1,9 +1,7 @@
 package io.papermc.typewriter.parser.token;
 
-import org.jetbrains.annotations.ApiStatus;
-
 public enum TokenType {
-    // keywords
+    // reserved keywords (contextual keywords shouldn't be there, they are valid identifier for any var)
     PACKAGE("package"),
     IMPORT("import"),
     STATIC("static"),

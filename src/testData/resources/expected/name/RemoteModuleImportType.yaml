@@ -1,0 +1,5 @@
+shortNames: {
+  "javax.lang.model.SourceVersion": "SourceVersion",
+  "javax.lang.model.element.AnnotationMirror": "AnnotationMirror",
+  "java.util.List": "java.util.List"
+}

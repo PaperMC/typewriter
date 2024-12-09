@@ -9,15 +9,17 @@ plugins {
 java {
     withSourcesJar()
     withJavadocJar()
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
 }
-
-java.toolchain.languageVersion.set(JavaLanguageVersion.of(21))
 
 repositories {
     mavenCentral()
 }
 
 val testData = sourceSets.create("testData")
+val testJavaPreviewVersion = providers.gradleProperty("testJavaPreviewVersion") // enable preview to test JEPs
 
 dependencies {
     implementation("com.google.guava:guava:33.3.1-jre")
@@ -40,12 +42,37 @@ tasks {
                 excludeTags("parser")
             }
         }
+        failFast = true
         inputs.files(testData.output.files)
+
+        if (testJavaPreviewVersion.isPresent) {
+            jvmArgs("--enable-preview")
+            javaLauncher = project.javaToolchains.launcherFor {
+                languageVersion = JavaLanguageVersion.of(testJavaPreviewVersion.get())
+            }
+        }
 
         testLogging {
             showStackTraces = true
             exceptionFormat = TestExceptionFormat.FULL
             events(TestLogEvent.STANDARD_OUT)
+        }
+    }
+
+    jar {
+        manifest {
+            attributes("Automatic-Module-Name" to "io.papermc.typewriter")
+        }
+    }
+
+    if (testJavaPreviewVersion.isPresent) {
+        listOf(compileTestJava.name, testData.compileJavaTaskName).forEach {
+            named<JavaCompile>(it).configure {
+                options.compilerArgs.add("--enable-preview")
+                javaCompiler = project.javaToolchains.compilerFor {
+                    languageVersion = JavaLanguageVersion.of(testJavaPreviewVersion.get())
+                }
+            }
         }
     }
 

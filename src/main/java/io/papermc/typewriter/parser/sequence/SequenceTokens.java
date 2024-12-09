@@ -88,13 +88,26 @@ public class SequenceTokens {
         return this;
     }
 
+    public SequenceTokens mapIdentifier(Predicate<String> names, Consumer<PrintableToken> callback) {
+        return this.mapIdentifier(names, callback, UnaryOperator.identity());
+    }
+
+    public SequenceTokens mapIdentifier(Predicate<String> names, Consumer<PrintableToken> callback, UnaryOperator<TokenTaskBuilder> parameters) {
+        if (this.ignoredTokens.contains(TokenType.IDENTIFIER)) {
+            throw new IllegalStateException("Cannot attempt to read an ignored token type: " + this.ignoredTokens);
+        }
+
+        this.expectedTokens.offer(newTask(new CallableAction(token -> token.type() == TokenType.IDENTIFIER && names.test(((CharSequenceToken) token).value()), callback, null), parameters));
+        return this;
+    }
+
     public SequenceTokens mapQualifiedName(Consumer<CharSequenceToken> nameCallback, Consumer<PrintableToken> dotCallback, @Nullable Consumer<SequenceTokens> partialAction) {
         return this.mapQualifiedName(nameCallback, dotCallback, type -> false, partialAction);
     }
 
     public SequenceTokens mapQualifiedName(Consumer<CharSequenceToken> nameCallback, Consumer<PrintableToken> dotCallback, Predicate<TokenType> transparentTokens, @Nullable Consumer<SequenceTokens> partialAction) {
         if (this.ignoredTokens.contains(TokenType.IDENTIFIER) || this.ignoredTokens.contains(TokenType.DOT)) {
-            throw new IllegalStateException("Cannot attempt to read an already ignored token type: " + this.ignoredTokens);
+            throw new IllegalStateException("Cannot attempt to read an ignored token type: " + this.ignoredTokens);
         }
         if (transparentTokens.test(TokenType.IDENTIFIER) || transparentTokens.test(TokenType.DOT)) {
             throw new IllegalArgumentException("Transparent tokens cannot be an identifier or a dot: " + transparentTokens);
@@ -106,6 +119,11 @@ public class SequenceTokens {
 
     public SequenceTokens group(Consumer<SequenceTokens> subAction, UnaryOperator<TokenTaskBuilder> parameters) {
         this.expectedTokens.offer(newTask(new SubAction(subAction), parameters));
+        return this;
+    }
+
+    public SequenceTokens either(Consumer<SequenceTokens> subAction) {
+        this.expectedTokens.offer(newTask(new EitherAction(subAction), TokenTaskBuilder::asOptional));
         return this;
     }
 
@@ -126,7 +144,28 @@ public class SequenceTokens {
             throw new IllegalStateException("Cannot attempt to skip an already ignored token type: " + type.name());
         }
 
-        this.expectedTokens.offer(newTask(new SkipAction(type, subAction), parameters));
+        this.expectedTokens.offer(newTask(new SkipAction(token -> token.type() == type, subAction), parameters));
+        return this;
+    }
+
+    public SequenceTokens skipIdentifier(Predicate<String> names) {
+        return this.skipIdentifier(names, UnaryOperator.identity());
+    }
+
+    public SequenceTokens skipIdentifier(Predicate<String> names, UnaryOperator<TokenTaskBuilder> parameters) {
+        return this.skipIdentifier(names, null, parameters);
+    }
+
+    public SequenceTokens skipIdentifier(Predicate<String> names, @Nullable Consumer<SequenceTokens> subAction) {
+        return this.skipIdentifier(names, subAction, UnaryOperator.identity());
+    }
+
+    public SequenceTokens skipIdentifier(Predicate<String> names, @Nullable Consumer<SequenceTokens> subAction, UnaryOperator<TokenTaskBuilder> parameters) {
+        if (this.ignoredTokens.contains(TokenType.IDENTIFIER)) {
+            throw new IllegalStateException("Cannot attempt to skip an already ignored token type: " + this.ignoredTokens);
+        }
+
+        this.expectedTokens.offer(newTask(new SkipAction(token -> token.type() == TokenType.IDENTIFIER && names.test(((CharSequenceToken) token).value()), subAction), parameters));
         return this;
     }
 
@@ -243,6 +282,16 @@ public class SequenceTokens {
         return sequence.execute((failedTask -> this.failedTask = failedTask));
     }
 
+    private record EitherAction(Consumer<SequenceTokens> subAction) implements TokenAction {
+
+        @Override
+        public boolean execute(Token token, SequenceTokens executor) {
+            executor.iterator().previous(); // get the initial token into the next pipe
+            executor.executeSub(this.subAction);
+            return false;
+        }
+    }
+
     private record SubAction(Consumer<SequenceTokens> subAction) implements TokenAction {
 
         @Override
@@ -252,11 +301,11 @@ public class SequenceTokens {
         }
     }
 
-    private record SkipAction(TokenType type, @Nullable Consumer<SequenceTokens> subAction) implements TokenAction {
+    private record SkipAction(Predicate<Token> tokenPredicate, @Nullable Consumer<SequenceTokens> subAction) implements TokenAction {
 
         @Override
         public boolean execute(Token token, SequenceTokens executor) {
-            boolean foundToken = this.type == token.type();
+            boolean foundToken = tokenPredicate.test(token);
             if (foundToken && this.subAction != null) {
                 return executor.executeSub(this.subAction);
             }

@@ -1,6 +1,9 @@
 package io.papermc.typewriter.context;
 
 import io.papermc.typewriter.ClassNamed;
+import org.jetbrains.annotations.ApiStatus;
+
+import static io.papermc.typewriter.context.ImportName.dotJoin;
 
 public interface ImportCollector {
 
@@ -19,13 +22,17 @@ public interface ImportCollector {
         }
 
         @Override
+        public void addModuleImport(String name) {
+        }
+
+        @Override
         public boolean canImportSafely(ClassNamed type) {
             return false;
         }
 
         @Override
         public String getStaticMemberShortName(String packageName, String memberName) {
-            return ImportName.dotJoin(packageName, memberName);
+            return dotJoin(packageName, memberName);
         }
 
         @Override
@@ -43,6 +50,9 @@ public interface ImportCollector {
     void addImport(String name);
 
     void addStaticImport(String name);
+
+    @ApiStatus.Experimental
+    void addModuleImport(String name);
 
     boolean canImportSafely(ClassNamed type);
 
