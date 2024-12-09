@@ -2,9 +2,9 @@ package io.papermc.typewriter.context;
 
 import io.papermc.typewriter.ClassNamed;
 import io.papermc.typewriter.parser.token.TokenType;
+import org.jetbrains.annotations.ApiStatus;
 
 import java.util.Objects;
-import java.util.function.Supplier;
 
 import static io.papermc.typewriter.parser.name.ProtoQualifiedName.IDENTIFIER_SEPARATOR;
 
@@ -12,7 +12,7 @@ public interface ImportName extends Comparable<ImportName> {
 
     String IMPORT_ON_DEMAND_MARKER = TokenType.STAR.value;
 
-    private static String asGlobal(String name) {
+    static String asGlobal(String name) {
         return dotJoin(name, IMPORT_ON_DEMAND_MARKER);
     }
 
@@ -28,40 +28,29 @@ public interface ImportName extends Comparable<ImportName> {
      */
     String name();
 
-    /**
-     * Gets the first identifier used to reference that import.
-     * Only relevant for single imports.
-     *
-     * @return the first identifier
-     */
-    String id();
-
-    boolean isGlobal();
-
     boolean newlyAdded();
 
-    ImportCategory category();
+    ImportCategory<?> category();
+
+    interface Identified extends ImportName {
+
+        /**
+         * Gets the first identifier used to reference that import.
+         * Only relevant for single imports.
+         *
+         * @return the first identifier
+         */
+        String id();
+
+        boolean isGlobal();
+    }
 
     @Override
     default int compareTo(ImportName other) {
         return this.name().compareTo(other.name());
     }
 
-    default boolean isImported(ClassNamed klass) {
-        return this.isImported(klass, klass::enclosing);
-    }
-
-    default boolean isImported(ClassNamed klass, Supplier<ClassNamed> enclosingKlass) {
-        if (this.isGlobal()) {
-            ClassNamed enclosing = enclosingKlass.get();
-            final String parentName = enclosing != null ? enclosing.canonicalName() : klass.packageName(); // handle package import
-            return asGlobal(parentName).equals(this.name());
-        }
-
-        return klass.canonicalName().equals(this.name());
-    }
-
-    record Type(String name, boolean isGlobal, boolean newlyAdded) implements ImportName {
+    record Type(String name, boolean isGlobal, boolean newlyAdded) implements Identified {
 
         public Type(ClassNamed className) {
             this(className.canonicalName(), false, true);
@@ -79,7 +68,7 @@ public interface ImportName extends Comparable<ImportName> {
         }
 
         @Override
-        public ImportCategory category() {
+        public ImportCategory<Type> category() {
             return ImportCategory.TYPE;
         }
 
@@ -103,7 +92,7 @@ public interface ImportName extends Comparable<ImportName> {
         }
     }
 
-    record Static(String name, String memberName, boolean isGlobal, boolean newlyAdded) implements ImportName {
+    record Static(String name, String memberName, boolean isGlobal, boolean newlyAdded) implements Identified {
 
         static Static fromQualifiedMemberName(String qualifiedMemberName) {
             boolean isGlobal = qualifiedMemberName.endsWith(IMPORT_ON_DEMAND_MARKER);
@@ -144,7 +133,7 @@ public interface ImportName extends Comparable<ImportName> {
         }
 
         @Override
-        public ImportCategory category() {
+        public ImportCategory<Static> category() {
             return ImportCategory.STATIC;
         }
 
@@ -165,6 +154,34 @@ public interface ImportName extends Comparable<ImportName> {
         @Override
         public int hashCode() {
             return Objects.hash(this.name, this.isGlobal);
+        }
+    }
+
+    @ApiStatus.Experimental
+    record Module(String name, boolean newlyAdded) implements ImportName {
+
+        @Override
+        public ImportCategory<Module> category() {
+            return ImportCategory.MODULE;
+        }
+
+        // exclude newlyAdded
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == this) {
+                return true;
+            }
+            if (obj == null || obj.getClass() != this.getClass()) {
+                return false;
+            }
+
+            Module other = (Module) obj;
+            return this.name.equals(other.name);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(this.name);
         }
     }
 }

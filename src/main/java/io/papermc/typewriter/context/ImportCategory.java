@@ -1,32 +1,27 @@
 package io.papermc.typewriter.context;
 
-import java.util.function.Predicate;
-import java.util.function.Supplier;
-import java.util.regex.Pattern;
+import org.jetbrains.annotations.ApiStatus;
 
-public enum ImportCategory {
-    TYPE(ImportName.Type.class::isInstance),
-    STATIC(ImportName.Static.class::isInstance);
+import java.util.Optional;
 
-    private final Predicate<ImportName> filter;
+public class ImportCategory<T extends ImportName> {
 
-    ImportCategory(Predicate<ImportName> filter) {
-        this.filter = filter;
+    public static final ImportCategory<ImportName.Type> TYPE = new ImportCategory<>(ImportName.Type.class, null);
+
+    public static final ImportCategory<ImportName.Static> STATIC = new ImportCategory<>(ImportName.Static.class, "static");
+
+    @ApiStatus.Experimental
+    public static final ImportCategory<ImportName.Module> MODULE = new ImportCategory<>(ImportName.Module.class, "module");
+
+    private final Class<T> klazz;
+    private final Optional<String> identity;
+
+    private ImportCategory(Class<T> klazz, String identity) {
+        this.klazz = klazz;
+        this.identity = Optional.ofNullable(identity);
     }
 
-    public ImportLayout.PackageFilter allOther() {
-        return ImportLayout.PackageFilter.wrap(this.filter);
-    }
-
-    public ImportLayout.PackageFilter startsWith(String prefix) {
-        return ImportLayout.PackageFilter.wrap(this.filter.and(type -> type.name().startsWith(prefix)));
-    }
-
-    public ImportLayout.PackageFilter endsWith(String suffix) {
-        return ImportLayout.PackageFilter.wrap(this.filter.and(type -> type.name().endsWith(suffix)));
-    }
-
-    public ImportLayout.PackageFilter matches(Supplier<Pattern> regex) { // supplier must be a memoizer or a constant
-        return ImportLayout.PackageFilter.wrap(this.filter.and(type -> regex.get().matcher(type.name()).find()));
+    public Optional<String> identity() {
+        return this.identity;
     }
 }

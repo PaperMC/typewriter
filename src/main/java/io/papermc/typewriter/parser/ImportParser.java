@@ -1,6 +1,7 @@
 package io.papermc.typewriter.parser;
 
 import io.papermc.typewriter.SourceFile;
+import io.papermc.typewriter.context.ImportCategory;
 import io.papermc.typewriter.context.ImportCollector;
 import io.papermc.typewriter.context.ImportNameCollector;
 import io.papermc.typewriter.parser.name.ProtoImportName;
@@ -14,7 +15,6 @@ import io.papermc.typewriter.parser.token.TokenType;
 
 import java.util.EnumSet;
 import java.util.Set;
-import java.util.function.Consumer;
 
 public final class ImportParser {
 
@@ -33,7 +33,8 @@ public final class ImportParser {
             .skip(TokenType.IMPORT, action -> {
                 ProtoImportName protoName = new ProtoImportName();
                 action
-                    .map(TokenType.STATIC, stat -> protoName.asStatic(), TokenTaskBuilder::asOptional)
+                    .map(TokenType.STATIC, stat -> protoName.asCategory(ImportCategory.STATIC), TokenTaskBuilder::asOptional)
+                    .mapIdentifier(name -> name.equals(ImportCategory.MODULE.identity().orElseThrow()), module -> protoName.asCategory(ImportCategory.MODULE), TokenTaskBuilder::asOptional) // todo either both
                     .mapQualifiedName(
                         name -> protoName.append(name.value()),
                         dot -> protoName.appendSeparator(),
@@ -61,7 +62,8 @@ public final class ImportParser {
             .skip(TokenType.IMPORT, action -> {
                 action
                     .skip(TokenType.STATIC, TokenTaskBuilder::asOptional)
-                    .skipQualifiedName((Consumer<SequenceTokens>) (partialAction) -> partialAction.skip(TokenType.STAR))
+                    .skipIdentifier(name -> name.equals(ImportCategory.MODULE.identity().orElseThrow()), TokenTaskBuilder::asOptional)
+                    .skipQualifiedName((SequenceTokens partialAction) -> partialAction.skip(TokenType.STAR))
                     .map(TokenType.SECO, tokenPos::end);
                 },
                 params -> params.asOptional().asRepeatable().hooks(manager -> {

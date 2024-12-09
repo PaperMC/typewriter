@@ -82,7 +82,7 @@ public class SearchReplaceRewriter extends SearchReplaceRewriterBase {
     @Override
     public boolean registerFor(SourceFile file) {
         if (this.options == null) {
-            LOGGER.error("Replace options are not defined, skipping the rewriter: {}", this.getName());
+            LOGGER.error("Replace options are not defined, skipping the rewriter for class: {}", file.mainClass().dottedNestedName());
             return false;
         }
 
