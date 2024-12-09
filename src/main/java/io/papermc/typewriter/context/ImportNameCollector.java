@@ -7,12 +7,13 @@ import io.papermc.typewriter.context.layout.ImportHeader;
 import io.papermc.typewriter.context.layout.ImportScheme;
 import io.papermc.typewriter.parser.name.ProtoImportName;
 import javax.lang.model.SourceVersion;
-import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import java.io.File;
 import java.lang.module.FindException;
+import java.lang.module.ModuleDescriptor;
 import java.lang.module.ModuleFinder;
 import java.lang.module.ModuleReference;
+import java.lang.reflect.AccessFlag;
 import java.lang.reflect.Modifier;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -27,7 +28,7 @@ import java.util.function.Supplier;
 public class ImportNameCollector implements ImportCollector {
 
     private static final String JAVA_LANG_PACKAGE = "java.lang";
-    private static @MonotonicNonNull Supplier<ModuleFinder> finderFactory;
+    private static Supplier<ModuleFinder> finderFactory;
     static {
         initModuleFinderFactory();
     }
@@ -45,14 +46,14 @@ public class ImportNameCollector implements ImportCollector {
 
     private static void initModuleFinderFactory() {
         String fullPaths = System.getProperty("jdk.module.path", System.getProperty("jdk.module.upgrade.path"));
-        final ModuleFinder local;
+        final ModuleFinder runtime;
         if (fullPaths != null) {
-            local = ModuleFinder.of(Arrays.stream(fullPaths.split(File.pathSeparator)).map(Path::of).toArray(Path[]::new));
+            runtime = ModuleFinder.of(Arrays.stream(fullPaths.split(File.pathSeparator)).map(Path::of).toArray(Path[]::new));
         } else {
-            local = null;
+            runtime = null;
         }
         ModuleFinder system = ModuleFinder.ofSystem();
-        finderFactory = () -> local == null ? system : ModuleFinder.compose(system, local);
+        finderFactory = () -> runtime == null ? system : ModuleFinder.compose(system, runtime);
     }
 
     @Override
@@ -108,7 +109,7 @@ public class ImportNameCollector implements ImportCollector {
         return this.importMap.getStaticMemberName(packageName, memberName);
     }
 
-    private boolean isImported(ImportName.Identified importName, ClassNamed klass, Supplier<ClassNamed> enclosingKlass) {
+    private boolean isUsed(ImportName.Identified importName, ClassNamed klass, Supplier<ClassNamed> enclosingKlass) {
         if (importName.isGlobal()) {
             ClassNamed enclosing = enclosingKlass.get();
             final String parentName = enclosing != null ? enclosing.canonicalName() : klass.packageName(); // handle package import
@@ -118,26 +119,39 @@ public class ImportNameCollector implements ImportCollector {
         return klass.canonicalName().equals(importName.name());
     }
 
-    private boolean isPackageExported(ImportName.Module module, ClassNamed klass) {
+    private boolean isPackageExported(String name, ClassNamed klass) {
         if (this.finder == null) {
             this.finder = finderFactory.get();
         }
 
-        Optional<ModuleReference> reference = Optional.empty();
+        Optional<ModuleReference> referenceOpt = Optional.empty();
         try {
-            reference = this.finder.find(module.name());
+            referenceOpt = this.finder.find(name);
         } catch (FindException ignored) {
             this.finder = finderFactory.get();
         }
 
-        if (reference.isPresent()) {
-            for (String pkg : reference.get().descriptor().packages()) {
+        if (referenceOpt.isPresent()) {
+            ModuleReference reference = referenceOpt.get();
+            for (String pkg : reference.descriptor().packages()) {
                 if (pkg.equals(klass.packageName())) {
                     return true;
                 }
             }
+
+            for (ModuleDescriptor.Requires require : reference.descriptor().requires()) {
+                if (require.accessFlags().contains(AccessFlag.TRANSITIVE)) {
+                    if (isPackageExported(require.name(), klass)) {
+                        return true;
+                    }
+                }
+            }
         }
         return false;
+    }
+
+    private boolean isUsed(ImportName.Module module, ClassNamed klass) {
+        return isPackageExported(module.name(), klass);
     }
 
     private <T extends ImportName> Optional<String> getShortName0(ClassNamed type, ImportCategory<T> category) {
@@ -154,13 +168,13 @@ public class ImportNameCollector implements ImportCollector {
             Supplier<ClassNamed> enclosing = Suppliers.memoize(foundClass::enclosing);
             if (category != ImportCategory.MODULE) {
                 for (T importName : imports) {
-                    if (this.isImported((ImportName.Identified) importName, foundClass, enclosing)) {
+                    if (this.isUsed((ImportName.Identified) importName, foundClass, enclosing)) {
                         break loop;
                     }
                 }
             } else {
                 for (T importName : imports) {
-                    if (this.isPackageExported((ImportName.Module) importName, foundClass)) {
+                    if (this.isUsed((ImportName.Module) importName, foundClass)) {
                         break loop;
                     }
                 }
