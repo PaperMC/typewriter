@@ -60,7 +60,7 @@ public class ImportLayout {
 
     public static class Builder {
 
-        private final Map<LazyBaseNameGlob, ImportHeader> sections = new LinkedHashMap<>();
+        private final Map<LazyBaseNameGlob, ImportHeader> headers = new LinkedHashMap<>();
 
         /**
          * Define a new import layout for a specific set of files, the file
@@ -75,12 +75,12 @@ public class ImportLayout {
          * @see #getRelevantHeader(Path, ImportHeader)
          */
         public Builder describeLayout(String fileGlob, UnaryOperator<ImportScheme> scheme, ImportOrder order) {
-            this.sections.put(new LazyBaseNameGlob(fileGlob), new ImportHeader(scheme.apply(new ImportScheme()), order));
+            this.headers.put(new LazyBaseNameGlob(fileGlob), new ImportHeader(scheme.apply(new ImportScheme()), order));
             return this;
         }
 
         public ImportLayout build() {
-            return new ImportLayout(this.sections);
+            return new ImportLayout(this.headers);
         }
     }
 
