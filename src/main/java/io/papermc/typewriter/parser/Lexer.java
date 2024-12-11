@@ -36,7 +36,7 @@ public class Lexer extends UnicodeTranslator implements Tokenizer {
     }
 
     public static Lexer fromReader(Reader reader) throws IOException { // might find a better way maybe more lazy too
-        CharArrayWriter w = new CharArrayWriter();
+        CharArrayWriter w = new CharArrayWriter(2048);
         int code;
         while ((code = reader.read()) != -1) {
             w.append((char) code);
