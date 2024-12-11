@@ -11,11 +11,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
 import java.lang.module.FindException;
 import java.lang.module.ModuleDescriptor;
 import java.lang.module.ModuleFinder;
 import java.lang.module.ModuleReference;
 import java.lang.reflect.Modifier;
+import java.net.URI;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -34,7 +37,17 @@ public class ImportNameCollector implements ImportCollector {
 
     private static Supplier<ModuleFinder> finderFactory;
     private static ModuleFinder finder;
+
+    private static VarHandle CLASS_GRAPH_PATHS;
     static {
+        Class<?> provider;
+        try {
+            provider = Class.forName("io.papermc.typewriter.classpath.ClassPathProvider");
+            CLASS_GRAPH_PATHS = MethodHandles.lookup().findStaticVarHandle(provider, "CLASS_PATH", List.class);
+        } catch (ClassNotFoundException ignored) {
+        } catch (NoSuchFieldException | IllegalAccessException ex) {
+            throw new RuntimeException(ex);
+        }
         initModuleFinderFactory();
     }
 
@@ -49,14 +62,21 @@ public class ImportNameCollector implements ImportCollector {
     }
 
     private static void initModuleFinderFactory() {
-        String fullPaths = System.getProperty("jdk.module.path", System.getProperty("jdk.module.upgrade.path"));
-        final ModuleFinder runtime;
-        if (fullPaths != null) {
-            runtime = ModuleFinder.of(Arrays.stream(fullPaths.split(File.pathSeparator)).map(Path::of).toArray(Path[]::new));
+        Path[] paths = null;
+        if (CLASS_GRAPH_PATHS != null) {
+            LOGGER.debug("Using classgraph extension!");
+            List<URI> classPath = (List<URI>) CLASS_GRAPH_PATHS.get();
+            if (!classPath.isEmpty()) {
+                paths = classPath.stream().map(Path::of).toArray(Path[]::new);
+            }
         } else {
-            runtime = null;
+            String fullPaths = System.getProperty("jdk.module.path", System.getProperty("java.class.path"));
+            if (fullPaths != null) {
+                paths = Arrays.stream(fullPaths.split(File.pathSeparator)).map(Path::of).toArray(Path[]::new);
+            }
         }
         ModuleFinder system = ModuleFinder.ofSystem();
+        ModuleFinder runtime = paths == null ? null : ModuleFinder.of(paths);
         finderFactory = () -> runtime == null ? system : ModuleFinder.compose(system, runtime);
     }
 
@@ -137,8 +157,12 @@ public class ImportNameCollector implements ImportCollector {
 
         if (referenceOpt.isPresent()) {
             ModuleDescriptor descriptor = referenceOpt.get().descriptor();
-            for (String name : descriptor.packages()) {
-                if (name.equals(packageName)) {
+            for (ModuleDescriptor.Exports exports : descriptor.exports()) {
+                if (exports.isQualified() && !exports.targets().contains(this.mainClass.packageName())) {
+                    continue;
+                }
+
+                if (exports.source().equals(packageName)) {
                     return true;
                 }
             }
