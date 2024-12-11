@@ -34,14 +34,16 @@ public class TokenTask implements TokenTaskThrowable {
         return this.repeatable;
     }
 
-    boolean repeatCall() {
-        boolean alreadyRan = this.alreadyRan;
-        this.alreadyRan = true;
-        return alreadyRan;
+    boolean alreadyRan() {
+        return this.alreadyRan;
     }
 
     boolean run(Token token, SequenceTokens executor) {
-        return this.action.execute(token, executor);
+        try {
+            return this.action.execute(token, executor);
+        } finally {
+            this.alreadyRan = true;
+        }
     }
 
     void runHook(HookType type, Consumer<Callback> callback) {

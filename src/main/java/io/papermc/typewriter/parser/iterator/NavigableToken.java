@@ -19,6 +19,10 @@ public class NavigableToken {
         this.tokens = new ArrayList<>();
     }
 
+    public int getIndex() {
+        return this.index;
+    }
+
     private Token getToken(int index) {
         return index >= this.tokens.size() ? null : this.tokens.get(index);
     }
