@@ -12,7 +12,7 @@ public class ImportScheme {
 
     private final List<MutableItem> items = new ArrayList<>();
     private final List<Item> frozenItems = Collections.unmodifiableList(Lists.transform(this.items, MutableItem::toImmutable));
-    private int initialSpace = 0;
+    private int nextSpace = 0;
 
     public final List<Item> view() {
         return this.frozenItems;
@@ -23,20 +23,15 @@ public class ImportScheme {
     }
 
     public ImportScheme newline(int count) {
-        if (this.items.isEmpty()) {
-            this.initialSpace += count;
-        } else {
-            this.items.getLast().appendSpace(count);
-        }
-
+        this.nextSpace += count;
         return this;
     }
 
     public ImportScheme group(Predicate<? super ImportName> name) {
         MutableItem item = new MutableItem(name);
-        if (this.initialSpace != 0) {
-            item.prependSpace(this.initialSpace);
-            this.initialSpace = 0;
+        if (this.nextSpace != 0) {
+            item.prependSpace(this.nextSpace);
+            this.nextSpace = 0;
         }
 
         this.items.add(item);
@@ -47,7 +42,7 @@ public class ImportScheme {
         return this.group((Predicate<? super ImportName>) filter);
     }
 
-    public record Item(int previousSpace, Predicate<? super ImportName> filter, int nextSpace) {
+    public record Item(int previousSpace, Predicate<? super ImportName> filter) {
 
         public boolean contains(ImportName name) {
             return this.filter.test(name);
@@ -58,7 +53,6 @@ public class ImportScheme {
 
         private final Predicate<? super ImportName> filter;
         private int previousSpace;
-        private int nextSpace;
 
         private MutableItem(Predicate<? super ImportName> tester) {
             this.filter = tester;
@@ -68,12 +62,8 @@ public class ImportScheme {
             this.previousSpace += count;
         }
 
-        public void appendSpace(int count) {
-            this.nextSpace += count;
-        }
-
         public Item toImmutable() {
-            return new Item(this.previousSpace, this.filter, this.nextSpace);
+            return new Item(this.previousSpace, this.filter);
         }
     }
 }

@@ -7,28 +7,33 @@ import io.papermc.typewriter.context.layout.ImportHeader;
 import io.papermc.typewriter.context.layout.ImportScheme;
 import io.papermc.typewriter.parser.name.ProtoImportName;
 import javax.lang.model.SourceVersion;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.lang.module.FindException;
 import java.lang.module.ModuleDescriptor;
 import java.lang.module.ModuleFinder;
 import java.lang.module.ModuleReference;
-import java.lang.reflect.AccessFlag;
 import java.lang.reflect.Modifier;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Iterator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.StringJoiner;
 import java.util.function.Supplier;
 
 public class ImportNameCollector implements ImportCollector {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(ImportNameCollector.class);
     private static final String JAVA_LANG_PACKAGE = "java.lang";
+
     private static Supplier<ModuleFinder> finderFactory;
+    private static ModuleFinder finder;
     static {
         initModuleFinderFactory();
     }
@@ -37,7 +42,6 @@ public class ImportNameCollector implements ImportCollector {
     private final ImportNameMap importMap = new ImportNameMap();
 
     private final ClassNamed mainClass;
-    private ModuleFinder finder;
     private boolean modified;
 
     public ImportNameCollector(ClassNamed mainClass) {
@@ -79,13 +83,13 @@ public class ImportNameCollector implements ImportCollector {
 
     @Override
     public void addModuleImport(String name) {
-        if (this.importMap.add(new ImportName.Module(name, true))) {
+        if (this.importMap.add(ImportName.Module.fromQualifiedName(name))) {
             this.modified = true;
         }
     }
 
     public void addProtoImport(ProtoImportName proto) {
-        // assume type name is valid
+        // assume name is valid
         ImportCategory<?> category = proto.getCategory();
         if (category == ImportCategory.STATIC) {
             this.importMap.add(new ImportName.Static(proto.getName(), proto.getStaticMemberName(), proto.isGlobal(), false));
@@ -119,29 +123,29 @@ public class ImportNameCollector implements ImportCollector {
         return klass.canonicalName().equals(importName.name());
     }
 
-    private boolean isPackageExported(String name, ClassNamed klass) {
-        if (this.finder == null) {
-            this.finder = finderFactory.get();
+    private boolean isPackageExported(String moduleName, String packageName) { // todo unnamed module? valid too for import declaration
+        if (finder == null) {
+            finder = finderFactory.get();
         }
 
         Optional<ModuleReference> referenceOpt = Optional.empty();
         try {
-            referenceOpt = this.finder.find(name);
+            referenceOpt = finder.find(moduleName);
         } catch (FindException ignored) {
-            this.finder = finderFactory.get();
+            finder = finderFactory.get();
         }
 
         if (referenceOpt.isPresent()) {
-            ModuleReference reference = referenceOpt.get();
-            for (String pkg : reference.descriptor().packages()) {
-                if (pkg.equals(klass.packageName())) {
+            ModuleDescriptor descriptor = referenceOpt.get().descriptor();
+            for (String name : descriptor.packages()) {
+                if (name.equals(packageName)) {
                     return true;
                 }
             }
 
-            for (ModuleDescriptor.Requires require : reference.descriptor().requires()) {
-                if (require.accessFlags().contains(AccessFlag.TRANSITIVE)) {
-                    if (isPackageExported(require.name(), klass)) {
+            for (ModuleDescriptor.Requires require : descriptor.requires()) {
+                if (require.modifiers().contains(ModuleDescriptor.Requires.Modifier.TRANSITIVE)) {
+                    if (isPackageExported(require.name(), packageName)) {
                         return true;
                     }
                 }
@@ -151,13 +155,21 @@ public class ImportNameCollector implements ImportCollector {
     }
 
     private boolean isUsed(ImportName.Module module, ClassNamed klass) {
-        return isPackageExported(module.name(), klass);
+        return isPackageExported(module.name(), klass.packageName());
     }
 
-    private <T extends ImportName> Optional<String> getShortName0(ClassNamed type, ImportCategory<T> category) {
-        Set<T> imports = this.importMap.get(category);
-        ClassNamed foundClass = type;
+    @FunctionalInterface
+    interface ImportUsed<T extends ImportName> {
+        boolean test(T name, ClassNamed klass, Supplier<ClassNamed> enclosingKlass);
+    }
 
+    private <T extends ImportName> Optional<String> getShortName0(ClassNamed type, ImportCategory<T> category, ImportUsed<T> isUsed) {
+        Set<T> imports = this.importMap.get(category);
+        if (imports.isEmpty()) {
+            return Optional.empty();
+        }
+
+        ClassNamed foundClass = type;
     loop:
         while (foundClass != null) {
             if (category == ImportCategory.STATIC && !Modifier.isStatic(foundClass.knownClass().getModifiers())) {
@@ -166,17 +178,9 @@ public class ImportNameCollector implements ImportCollector {
             }
 
             Supplier<ClassNamed> enclosing = Suppliers.memoize(foundClass::enclosing);
-            if (category != ImportCategory.MODULE) {
-                for (T importName : imports) {
-                    if (this.isUsed((ImportName.Identified) importName, foundClass, enclosing)) {
-                        break loop;
-                    }
-                }
-            } else {
-                for (T importName : imports) {
-                    if (this.isUsed((ImportName.Module) importName, foundClass)) {
-                        break loop;
-                    }
+            for (T importName : imports) {
+                if (isUsed.test(importName, foundClass, enclosing)) {
+                    break loop;
                 }
             }
 
@@ -193,12 +197,12 @@ public class ImportNameCollector implements ImportCollector {
     @Override
     public String getShortName(ClassNamed type, boolean autoImport) {
         return this.typeCache.computeIfAbsent(type, key -> {
-            Optional<String> shortName = getShortName0(key, ImportCategory.TYPE); // regular import
+            Optional<String> shortName = getShortName0(key, ImportCategory.TYPE, this::isUsed); // regular import
             if (shortName.isEmpty()) {
-                shortName = getShortName0(key, ImportCategory.MODULE);
+                shortName = getShortName0(key, ImportCategory.MODULE, (name, klass, enclosingKlass) -> isUsed(name, klass));
             }
             if (shortName.isEmpty() && key.knownClass() != null && Modifier.isStatic(key.knownClass().getModifiers())) {
-                shortName = getShortName0(key, ImportCategory.STATIC);
+                shortName = getShortName0(key, ImportCategory.STATIC, this::isUsed);
             }
 
             return shortName.orElseGet(() -> {
@@ -222,6 +226,12 @@ public class ImportNameCollector implements ImportCollector {
         });
     }
 
+    private String printImportStatement(ImportName type) {
+        StringBuilder builder = new StringBuilder();
+        printImportStatement(builder, type);
+        return builder.toString();
+    }
+
     private void printImportStatement(StringBuilder builder, ImportName type) {
         builder.append("import ");
         type.category().identity().ifPresent(name -> {
@@ -232,11 +242,11 @@ public class ImportNameCollector implements ImportCollector {
     }
 
     public String writeImports(ImportHeader header) {
-        Set<ImportName> addedImports = this.importMap.entries();
+        Set<ImportName> remainingImports = new HashSet<>(this.importMap.entries());
         StringBuilder builder = new StringBuilder();
-        for (Iterator<ImportScheme.Item> iterator = header.scheme().view().iterator(); iterator.hasNext(); ) {
-            ImportScheme.Item item = iterator.next();
-            List<ImportName> types = addedImports.stream()
+    loop:
+        for (ImportScheme.Item item : header.scheme().view()) {
+            List<ImportName> types = remainingImports.stream()
                 .filter(item::contains)
                 .sorted(header.order().comparator)
                 .toList();
@@ -244,13 +254,22 @@ public class ImportNameCollector implements ImportCollector {
             if (!types.isEmpty()) {
                 builder.append("\n".repeat(item.previousSpace()));
                 for (ImportName type : types) {
+                    remainingImports.remove(type);
                     this.printImportStatement(builder, type);
-                    if (iterator.hasNext()) {
+                    if (!remainingImports.isEmpty()) {
                         builder.append('\n');
+                    } else {
+                        break loop;
                     }
                 }
-                builder.append("\n".repeat(item.nextSpace()));
             }
+        }
+
+        if (!remainingImports.isEmpty()) {
+            builder.deleteCharAt(builder.length() - 1);
+            StringJoiner joiner = new StringJoiner("", "- ", "\n");
+            remainingImports.forEach(name -> joiner.add(printImportStatement(name)));
+            LOGGER.error("Some imports have been skipped since the import layout is not defined for them!\n{}", joiner.toString());
         }
 
         return builder.toString();

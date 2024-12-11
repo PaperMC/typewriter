@@ -7,9 +7,9 @@ public record ImportHeader(ImportScheme scheme, ImportOrder order) {
     public static final ImportHeader DEFAULT = inlined(scheme -> scheme
         .group(PackageFilter.TYPE)
         .newline()
-        .group(PackageFilter.STATIC)
+        .group(PackageFilter.MODULE)
         .newline()
-        .group(PackageFilter.MODULE), ImportOrder.MERGED);
+        .group(PackageFilter.STATIC), ImportOrder.MERGED);
 
     private static ImportHeader inlined(UnaryOperator<ImportScheme> scheme, ImportOrder order) {
         return new ImportHeader(scheme.apply(new ImportScheme()), order);
