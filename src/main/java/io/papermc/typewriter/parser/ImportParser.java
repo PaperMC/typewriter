@@ -36,18 +36,18 @@ public final class ImportParser {
                 action
                     .map(TokenType.STATIC, $ -> protoName.asCategory(ImportCategory.STATIC))
                     .orMap((token, reader) -> {
-                        boolean isModule = token.type() == TokenType.IDENTIFIER && ((CharSequenceToken) token).value().equals(ImportCategory.MODULE.identity().orElseThrow());
-                        if (isModule) {
+                        if (token.type() == TokenType.IDENTIFIER && ((CharSequenceToken) token).value().equals(ImportCategory.MODULE.identity().orElseThrow())) {
                             PrintableToken nextToken = reader.next();
-                            if (nextToken != null && nextToken.type() == TokenType.DOT) {
+                            if (nextToken != null && nextToken.type() == TokenType.IDENTIFIER) {
+                                return true;
+                            } else {
                                 // module is a contextual keyword meaning it can be used as a regular identifier elsewhere
                                 // if the qualified name starts with "module" it should *not* be considered as a module import
                                 // import module A; <-/-> import module.A;
                                 reader.reset();
-                                return false;
                             }
                         }
-                        return isModule;
+                        return false;
                     },token -> protoName.asCategory(ImportCategory.MODULE), TokenTaskBuilder::asOptional)
                     .mapQualifiedName(
                         name -> protoName.append(name.value()),
@@ -64,7 +64,7 @@ public final class ImportParser {
                 },
                 params -> params.asOptional().asRepeatable()
             )
-            .executeOrThrow((failedTask, token) -> failedTask.createFailure("Wrong token found while collecting imports", token).withAdditionalContext(source));
+            .executeOrThrow(failedTask -> failedTask.createFailure("Wrong token found while collecting imports").withAdditionalContext(source));
     }
 
     public static TokenCapture trackImportPosition(Tokenizer tokenizer) {
@@ -77,18 +77,18 @@ public final class ImportParser {
                 action
                     .skip(TokenType.STATIC)
                     .orSkip((token, reader) -> {
-                        boolean isModule = token.type() == TokenType.IDENTIFIER && ((CharSequenceToken) token).value().equals(ImportCategory.MODULE.identity().orElseThrow());
-                        if (isModule) {
+                        if (token.type() == TokenType.IDENTIFIER && ((CharSequenceToken) token).value().equals(ImportCategory.MODULE.identity().orElseThrow())) {
                             PrintableToken nextToken = reader.next();
-                            if (nextToken != null && nextToken.type() == TokenType.DOT) {
+                            if (nextToken != null && nextToken.type() == TokenType.IDENTIFIER) {
+                                return true;
+                            } else {
                                 // module is a contextual keyword meaning it can be used as a regular identifier elsewhere
                                 // if the qualified name starts with "module" it should *not* be considered as a module import
                                 // import module A; <-/-> import module.A;
                                 reader.reset();
-                                return false;
                             }
                         }
-                        return isModule;
+                        return false;
                     }, TokenTaskBuilder::asOptional)
                     .skipQualifiedName((SequenceTokens partialAction) -> partialAction.skip(TokenType.STAR))
                     .map(TokenType.SECO, tokenPos::end);
@@ -97,7 +97,7 @@ public final class ImportParser {
                     manager.bind(HookType.FIRST, hook -> hook.pre(tokenPos::begin));
                 })
             )
-            .executeOrThrow((failedTask, token) -> failedTask.createFailure("Wrong token found while tracking import section position", token));
+            .executeOrThrow(failedTask -> failedTask.createFailure("Wrong token found while tracking import section position"));
         return tokenPos.fetch();
     }
 

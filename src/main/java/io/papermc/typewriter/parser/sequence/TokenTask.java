@@ -17,7 +17,7 @@ public class TokenTask implements TokenTaskThrowable {
     private final boolean optional;
     private final boolean repeatable;
     private final @MonotonicNonNull HookManager hookManager;
-    private boolean alreadyRan;
+    PrintableToken lastInput;
 
     public TokenTask(TokenAction action, boolean optional, boolean repeatable, HookManager hookManager) {
         this.action = action;
@@ -34,16 +34,17 @@ public class TokenTask implements TokenTaskThrowable {
         return this.repeatable;
     }
 
+    public PrintableToken getLastInput() {
+        return this.lastInput;
+    }
+
     boolean alreadyRan() {
-        return this.alreadyRan;
+        return this.lastInput != null;
     }
 
     boolean run(Token token, SequenceTokens executor) {
-        try {
-            return this.action.execute(token, executor);
-        } finally {
-            this.alreadyRan = true;
-        }
+        this.lastInput = (PrintableToken) token;
+        return this.action.execute(token, executor);
     }
 
     void runHook(HookType type, Consumer<Callback> callback) {
@@ -100,14 +101,14 @@ public class TokenTask implements TokenTaskThrowable {
     }
 
     @Override
-    public FailureException createFailure(String message, PrintableToken token) {
-        return new FailureException(message, token);
+    public FailureException createFailure(String message) {
+        return new FailureException(message);
     }
 
     public class FailureException extends ParserException {
 
-        public FailureException(String message, PrintableToken token) {
-            super(message, token);
+        public FailureException(String message) {
+            super(message, TokenTask.this.lastInput);
         }
 
         @Override
