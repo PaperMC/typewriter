@@ -5,8 +5,6 @@ import io.papermc.typewriter.context.ImportName;
 import org.jetbrains.annotations.ApiStatus;
 
 import java.util.function.Predicate;
-import java.util.function.Supplier;
-import java.util.regex.Pattern;
 
 public class PackageFilter implements Predicate<ImportName> {
 
@@ -33,10 +31,6 @@ public class PackageFilter implements Predicate<ImportName> {
 
     public PackageFilter onlyWildcard() {
         return PackageFilter.wrap(this.filter.and(type -> type instanceof ImportName.Identified identified && identified.isGlobal()));
-    }
-
-    public PackageFilter matches(Supplier<Pattern> regex) { // supplier must be a memoizer or a constant
-        return PackageFilter.wrap(this.filter.and(type -> regex.get().matcher(type.name()).find()));
     }
 
     private static PackageFilter wrap(Predicate<ImportName> filter) {

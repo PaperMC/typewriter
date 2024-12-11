@@ -1,7 +1,9 @@
 package io.papermc.typewriter.context;
 
+import com.google.common.base.Preconditions;
 import io.papermc.typewriter.ClassNamed;
 import io.papermc.typewriter.parser.token.TokenType;
+import javax.lang.model.SourceVersion;
 import org.jetbrains.annotations.ApiStatus;
 
 import java.util.Objects;
@@ -57,6 +59,7 @@ public interface ImportName extends Comparable<ImportName> {
         }
 
         static Type fromQualifiedName(String qualifiedName) {
+            Preconditions.checkArgument(SourceVersion.isName(qualifiedName), "Invalid import name '%s'", qualifiedName);
             boolean isGlobal = qualifiedName.endsWith(IMPORT_ON_DEMAND_MARKER);
             return new Type(qualifiedName, isGlobal, true);
         }
@@ -95,6 +98,7 @@ public interface ImportName extends Comparable<ImportName> {
     record Static(String name, String memberName, boolean isGlobal, boolean newlyAdded) implements Identified {
 
         static Static fromQualifiedMemberName(String qualifiedMemberName) {
+            Preconditions.checkArgument(SourceVersion.isName(qualifiedMemberName), "Invalid static import name '%s'", qualifiedMemberName);
             boolean isGlobal = qualifiedMemberName.endsWith(IMPORT_ON_DEMAND_MARKER);
             final String memberName;
             if (isGlobal) {
@@ -160,6 +164,11 @@ public interface ImportName extends Comparable<ImportName> {
     @ApiStatus.Experimental
     record Module(String name, boolean newlyAdded) implements ImportName {
 
+        static Module fromQualifiedName(String qualifiedName) {
+            Preconditions.checkArgument(SourceVersion.isName(qualifiedName), "Invalid module name '%s'", qualifiedName);
+            return new Module(qualifiedName, true);
+        }
+
         @Override
         public ImportCategory<Module> category() {
             return ImportCategory.MODULE;
@@ -181,7 +190,7 @@ public interface ImportName extends Comparable<ImportName> {
 
         @Override
         public int hashCode() {
-            return Objects.hash(this.name);
+            return this.name.hashCode();
         }
     }
 }
