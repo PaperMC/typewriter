@@ -143,7 +143,7 @@ public class ImportNameCollector implements ImportCollector {
         return klass.canonicalName().equals(importName.name());
     }
 
-    private boolean isPackageExported(String moduleName, String packageName) { // todo unnamed module? valid too for import declaration
+    private boolean isPackageExported(String moduleName, String packageName) {
         if (finder == null) {
             finder = finderFactory.get();
         }
