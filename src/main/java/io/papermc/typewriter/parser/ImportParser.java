@@ -8,6 +8,7 @@ import io.papermc.typewriter.parser.name.ProtoImportName;
 import io.papermc.typewriter.parser.sequence.SequenceTokens;
 import io.papermc.typewriter.parser.sequence.TokenTaskBuilder;
 import io.papermc.typewriter.parser.sequence.hook.HookType;
+import io.papermc.typewriter.parser.token.CharSequenceToken;
 import io.papermc.typewriter.parser.token.pos.TokenCapture;
 import io.papermc.typewriter.parser.token.pos.TokenRecorder;
 import io.papermc.typewriter.parser.token.PrintableToken;
@@ -33,8 +34,21 @@ public final class ImportParser {
             .skip(TokenType.IMPORT, action -> {
                 ProtoImportName protoName = new ProtoImportName();
                 action
-                    .map(TokenType.STATIC, stat -> protoName.asCategory(ImportCategory.STATIC), TokenTaskBuilder::asOptional)
-                    .mapIdentifier(name -> name.equals(ImportCategory.MODULE.identity().orElseThrow()), module -> protoName.asCategory(ImportCategory.MODULE), TokenTaskBuilder::asOptional) // todo either both
+                    .map(TokenType.STATIC, $ -> protoName.asCategory(ImportCategory.STATIC))
+                    .orMap((token, reader) -> {
+                        boolean isModule = token.type() == TokenType.IDENTIFIER && ((CharSequenceToken) token).value().equals(ImportCategory.MODULE.identity().orElseThrow());
+                        if (isModule) {
+                            PrintableToken nextToken = reader.next();
+                            if (nextToken != null && nextToken.type() == TokenType.DOT) {
+                                // module is a contextual keyword meaning it can be used as a regular identifier elsewhere
+                                // if the qualified name starts with "module" it should *not* be considered as a module import
+                                // import module A; <-/-> import module.A;
+                                reader.reset();
+                                return false;
+                            }
+                        }
+                        return isModule;
+                    },token -> protoName.asCategory(ImportCategory.MODULE), TokenTaskBuilder::asOptional)
                     .mapQualifiedName(
                         name -> protoName.append(name.value()),
                         dot -> protoName.appendSeparator(),
@@ -61,8 +75,21 @@ public final class ImportParser {
             }, TokenTaskBuilder::asOptional) // for default package
             .skip(TokenType.IMPORT, action -> {
                 action
-                    .skip(TokenType.STATIC, TokenTaskBuilder::asOptional)
-                    .skipIdentifier(name -> name.equals(ImportCategory.MODULE.identity().orElseThrow()), TokenTaskBuilder::asOptional)
+                    .skip(TokenType.STATIC)
+                    .orSkip((token, reader) -> {
+                        boolean isModule = token.type() == TokenType.IDENTIFIER && ((CharSequenceToken) token).value().equals(ImportCategory.MODULE.identity().orElseThrow());
+                        if (isModule) {
+                            PrintableToken nextToken = reader.next();
+                            if (nextToken != null && nextToken.type() == TokenType.DOT) {
+                                // module is a contextual keyword meaning it can be used as a regular identifier elsewhere
+                                // if the qualified name starts with "module" it should *not* be considered as a module import
+                                // import module A; <-/-> import module.A;
+                                reader.reset();
+                                return false;
+                            }
+                        }
+                        return isModule;
+                    }, TokenTaskBuilder::asOptional)
                     .skipQualifiedName((SequenceTokens partialAction) -> partialAction.skip(TokenType.STAR))
                     .map(TokenType.SECO, tokenPos::end);
                 },

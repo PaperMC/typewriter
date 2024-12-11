@@ -9,12 +9,14 @@ import io.papermc.typewriter.parser.token.Token;
 import io.papermc.typewriter.parser.token.TokenType;
 import javax.lang.model.SourceVersion;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jetbrains.annotations.ApiStatus;
 
 import java.util.ArrayDeque;
 import java.util.EnumSet;
-import java.util.Queue;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
@@ -23,7 +25,7 @@ public class SequenceTokens {
 
     private final NavigableToken iterator;
     private final Set<TokenType> ignoredTokens;
-    private final Queue<TokenTask> expectedTokens = new ArrayDeque<>();
+    private final ArrayDeque<TokenTask> expectedTokens = new ArrayDeque<>();
     private TokenTask failedTask;
 
     private SequenceTokens(SequenceTokens from) {
@@ -117,13 +119,32 @@ public class SequenceTokens {
         return this;
     }
 
-    public SequenceTokens group(Consumer<SequenceTokens> subAction, UnaryOperator<TokenTaskBuilder> parameters) {
-        this.expectedTokens.offer(newTask(new SubAction(subAction), parameters));
+    @ApiStatus.Internal
+    public SequenceTokens mapUnsafe(BiPredicate<PrintableToken, LookAheadReader> callback, UnaryOperator<TokenTaskBuilder> parameters) {
+        this.expectedTokens.offer(newTask(new UnsafeAction(callback), parameters));
         return this;
     }
 
-    public SequenceTokens either(Consumer<SequenceTokens> subAction) {
-        this.expectedTokens.offer(newTask(new EitherAction(subAction), TokenTaskBuilder::asOptional));
+    public SequenceTokens orMap(BiPredicate<PrintableToken, LookAheadReader> tokenPredicate, Consumer<PrintableToken> callback, UnaryOperator<TokenTaskBuilder> parameters) {
+        TokenTask previousTask = Objects.requireNonNull(this.expectedTokens.pollLast(), "Cannot call orMap without a previous task");
+        this.expectedTokens.offer(newTask(new OrCallableAction(previousTask, new UnsafeAction((token, reader) -> {
+            boolean success = tokenPredicate.test(token, reader);
+            if (success) {
+                callback.accept(token);
+            }
+            return success;
+        })), parameters));
+        return this;
+    }
+
+    public SequenceTokens orSkip(BiPredicate<PrintableToken, LookAheadReader> tokenPredicate, UnaryOperator<TokenTaskBuilder> parameters) {
+        TokenTask previousTask = Objects.requireNonNull(this.expectedTokens.pollLast(), "Cannot call orSkip without a previous task");
+        this.expectedTokens.offer(newTask(new OrCallableAction(previousTask, new UnsafeAction(tokenPredicate)), parameters));
+        return this;
+    }
+
+    public SequenceTokens group(Consumer<SequenceTokens> subAction, UnaryOperator<TokenTaskBuilder> parameters) {
+        this.expectedTokens.offer(newTask(new SubAction(subAction), parameters));
         return this;
     }
 
@@ -144,7 +165,7 @@ public class SequenceTokens {
             throw new IllegalStateException("Cannot attempt to skip an already ignored token type: " + type.name());
         }
 
-        this.expectedTokens.offer(newTask(new SkipAction(token -> token.type() == type, subAction), parameters));
+        this.expectedTokens.offer(newTask(new SkipAction(token -> token.type() == type, type, subAction), parameters));
         return this;
     }
 
@@ -165,7 +186,7 @@ public class SequenceTokens {
             throw new IllegalStateException("Cannot attempt to skip an already ignored token type: " + this.ignoredTokens);
         }
 
-        this.expectedTokens.offer(newTask(new SkipAction(token -> token.type() == TokenType.IDENTIFIER && names.test(((CharSequenceToken) token).value()), subAction), parameters));
+        this.expectedTokens.offer(newTask(new SkipAction(token -> token.type() == TokenType.IDENTIFIER && names.test(((CharSequenceToken) token).value()), null, subAction), parameters));
         return this;
     }
 
@@ -233,12 +254,9 @@ public class SequenceTokens {
 
                 TokenTask task = this.expectedTokens.peek();
 
-                boolean alreadyRan = false;
-                if (task.isRepeatable()) {
-                    alreadyRan = task.repeatCall();
-                    if (!alreadyRan) {
-                        task.runHook(HookType.FIRST, hook -> hook.pre().call(token));
-                    }
+                boolean alreadyRan = task.alreadyRan();
+                if (task.isRepeatable() && !alreadyRan) {
+                    task.runHook(HookType.FIRST, hook -> hook.pre().call(token));
                 }
 
                 task.runHook(HookType.EVERY, hook -> hook.pre().call(token));
@@ -263,6 +281,16 @@ public class SequenceTokens {
                 }
             }
 
+            if (!this.iterator.hasNext()) {
+                // consume remaining optional tasks when the input is completely evaluated
+                while (!this.expectedTokens.isEmpty()) {
+                    TokenTask task = this.expectedTokens.peek();
+                    if (task.isOptional()) {
+                        this.expectedTokens.poll();
+                    }
+                }
+            }
+
             boolean done = this.expectedTokens.isEmpty() && failedTask == null;
             if (!done) {
                 this.failedTask = failedTask != null ? failedTask : this.expectedTokens.peek();
@@ -282,13 +310,58 @@ public class SequenceTokens {
         return sequence.execute((failedTask -> this.failedTask = failedTask));
     }
 
-    private record EitherAction(Consumer<SequenceTokens> subAction) implements TokenAction {
+    public interface LookAheadReader {
+
+        @Nullable PrintableToken next();
+
+        void reset();
+
+        static LookAheadReader createNow(SequenceTokens executor) {
+            return new LookAheadReader() {
+                private final NavigableToken iterator = executor.iterator;
+                private final int iIndex = this.iterator.getIndex();
+
+                @Override
+                public PrintableToken next() {
+                    while (this.iterator.hasNext()) {
+                        Token token = this.iterator.peekNext();
+                        if (executor.ignoredTokens.contains(token.type())) {
+                            this.iterator.next();
+                            continue;
+                        }
+
+                        return (PrintableToken) token;
+                    }
+                    return null;
+                }
+
+                @Override
+                public void reset() {
+                    int delta = this.iterator.getIndex() - this.iIndex;
+                    while (delta-- != 0) {
+                        this.iterator.previous();
+                    }
+                }
+            };
+        }
+    }
+
+    private record UnsafeAction(BiPredicate<PrintableToken, LookAheadReader> callback) implements TokenAction {
 
         @Override
         public boolean execute(Token token, SequenceTokens executor) {
-            executor.iterator().previous(); // get the initial token into the next pipe
-            executor.executeSub(this.subAction);
-            return false;
+            return this.callback.test((PrintableToken) token, LookAheadReader.createNow(executor));
+        }
+    }
+
+    private record OrCallableAction(TokenTask firstTask, TokenAction secondAction) implements TokenAction {
+
+        @Override
+        public boolean execute(Token token, SequenceTokens executor) {
+            if (!this.firstTask.run(token, executor)) {
+                return this.secondAction.execute(token, executor);
+            }
+            return true;
         }
     }
 
@@ -301,11 +374,11 @@ public class SequenceTokens {
         }
     }
 
-    private record SkipAction(Predicate<Token> tokenPredicate, @Nullable Consumer<SequenceTokens> subAction) implements TokenAction {
+    private record SkipAction(Predicate<Token> tokenPredicate, TokenType type, @Nullable Consumer<SequenceTokens> subAction) implements TokenAction {
 
         @Override
         public boolean execute(Token token, SequenceTokens executor) {
-            boolean foundToken = tokenPredicate.test(token);
+            boolean foundToken = this.tokenPredicate.test(token);
             if (foundToken && this.subAction != null) {
                 return executor.executeSub(this.subAction);
             }
