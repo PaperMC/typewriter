@@ -6,21 +6,16 @@ import io.papermc.typewriter.ClassNamed;
 import io.papermc.typewriter.context.layout.ImportHeader;
 import io.papermc.typewriter.context.layout.ImportScheme;
 import io.papermc.typewriter.parser.name.ProtoImportName;
+import io.papermc.typewriter.util.ClassGraphBridge;
 import javax.lang.model.SourceVersion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.VarHandle;
 import java.lang.module.FindException;
 import java.lang.module.ModuleDescriptor;
 import java.lang.module.ModuleFinder;
 import java.lang.module.ModuleReference;
 import java.lang.reflect.Modifier;
-import java.net.URI;
-import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -35,49 +30,24 @@ public class ImportNameCollector implements ImportCollector {
     private static final Logger LOGGER = LoggerFactory.getLogger(ImportNameCollector.class);
     private static final String JAVA_LANG_PACKAGE = "java.lang";
 
-    private static Supplier<ModuleFinder> finderFactory;
+    private static final Supplier<ModuleFinder> finderFactory;
     private static ModuleFinder finder;
-
-    private static VarHandle CLASS_GRAPH_PATHS;
     static {
-        Class<?> provider;
-        try {
-            provider = Class.forName("io.papermc.typewriter.classpath.ClassPathProvider");
-            CLASS_GRAPH_PATHS = MethodHandles.lookup().findStaticVarHandle(provider, "CLASS_PATH", List.class);
-        } catch (ClassNotFoundException ignored) {
-        } catch (NoSuchFieldException | IllegalAccessException ex) {
-            throw new RuntimeException(ex);
-        }
-        initModuleFinderFactory();
+        ModuleFinder runtime = ClassGraphBridge.runtimeFinder();
+        ModuleFinder system = ModuleFinder.ofSystem();
+        finderFactory = () -> runtime == null ? system : ModuleFinder.compose(system, runtime);;
     }
 
     private final Map<ClassNamed, String> typeCache = new HashMap<>();
     private final ImportNameMap importMap = new ImportNameMap();
 
     private final ClassNamed mainClass;
+    private final String moduleName;
     private boolean modified;
 
     public ImportNameCollector(ClassNamed mainClass) {
         this.mainClass = mainClass;
-    }
-
-    private static void initModuleFinderFactory() {
-        Path[] paths = null;
-        if (CLASS_GRAPH_PATHS != null) {
-            LOGGER.debug("Using classgraph extension!");
-            List<URI> classPath = (List<URI>) CLASS_GRAPH_PATHS.get();
-            if (!classPath.isEmpty()) {
-                paths = classPath.stream().map(Path::of).toArray(Path[]::new);
-            }
-        } else {
-            String fullPaths = System.getProperty("jdk.module.path", System.getProperty("java.class.path"));
-            if (fullPaths != null) {
-                paths = Arrays.stream(fullPaths.split(File.pathSeparator)).map(Path::of).toArray(Path[]::new);
-            }
-        }
-        ModuleFinder system = ModuleFinder.ofSystem();
-        ModuleFinder runtime = paths == null ? null : ModuleFinder.of(paths);
-        finderFactory = () -> runtime == null ? system : ModuleFinder.compose(system, runtime);
+        this.moduleName = ClassGraphBridge.getModuleName(mainClass);
     }
 
     @Override
@@ -157,12 +127,12 @@ public class ImportNameCollector implements ImportCollector {
 
         if (referenceOpt.isPresent()) {
             ModuleDescriptor descriptor = referenceOpt.get().descriptor();
-            for (ModuleDescriptor.Exports exports : descriptor.exports()) {
-                if (exports.isQualified() && !exports.targets().contains(this.mainClass.packageName())) {
+            for (ModuleDescriptor.Exports export : descriptor.exports()) {
+                if (this.moduleName != null && export.isQualified() && !export.targets().contains(this.moduleName)) {
                     continue;
                 }
 
-                if (exports.source().equals(packageName)) {
+                if (export.source().equals(packageName)) {
                     return true;
                 }
             }
