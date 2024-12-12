@@ -2,6 +2,9 @@ package name;
 
 import module java.compiler;
 import module java.sql;
+// unused, only to check if the parser is fine with it
+import module.Dummy;
+import module/**//*.*/.Dummy;
 
 public class RemoteModuleImportType {
     {
