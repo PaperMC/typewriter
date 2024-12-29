@@ -40,7 +40,7 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
     private static final Logger LOGGER = LoggerFactory.getLogger(SearchReplaceRewriterBase.class);
 
     @Override
-    public void writeToFile(Path parent, Path writeFolder, SourcesMetadata sourcesMetadata, SourceFile file) throws IOException {
+    public void writeToFile(Path parent, SourcesMetadata sourcesMetadata, SourceFile file) throws IOException {
         Path filePath = file.path();
 
         final Path path = parent.resolve(filePath);
@@ -75,10 +75,6 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
             destinationPath = parent.resolve(filePath);
         }
 
-        if (!writeFolder.equals(parent)) { // todo remove
-            destinationPath = writeFolder.resolve(filePath);
-            Files.createDirectories(destinationPath.getParent());
-        }
         Files.writeString(destinationPath, content, StandardCharsets.UTF_8);
     }
 
