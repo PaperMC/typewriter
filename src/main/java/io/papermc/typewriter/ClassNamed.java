@@ -3,6 +3,7 @@ package io.papermc.typewriter;
 import com.google.common.base.Preconditions;
 import io.papermc.typewriter.parser.name.ProtoImportName;
 import io.papermc.typewriter.util.ClassHelper;
+import io.papermc.typewriter.util.ClassResolver;
 import javax.lang.model.SourceVersion;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -74,6 +75,10 @@ public record ClassNamed(String packageName, String simpleName, String dottedNes
         return new ClassNamed(packageName, simpleName, nestedName, null);
     }
 
+    public ClassNamed resolve(ClassResolver resolver) {
+        return resolver.resolveOrThrow(this);
+    }
+
     public ClassNamed topLevel() {
         if (this.knownClass != null) {
             Class<?> topLevelClass = ClassHelper.getTopLevelClass(this.knownClass);
@@ -143,6 +148,18 @@ public record ClassNamed(String packageName, String simpleName, String dottedNes
         }
 
         return otherType.dottedNestedName().substring(startOffset);
+    }
+
+    public String binaryName() {
+        if (this.knownClass != null) {
+            return this.knownClass.getName();
+        }
+
+        if (this.packageName.isEmpty()) {
+            return this.dottedNestedName.replace('.', '$');
+        }
+
+        return this.packageName + '.' + this.dottedNestedName.replace('.', '$');
     }
 
     public String canonicalName() {

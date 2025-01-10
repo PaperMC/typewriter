@@ -3,12 +3,16 @@ package io.papermc.typewriter.registration;
 import io.papermc.typewriter.context.SourcesMetadata;
 import io.papermc.typewriter.SourceFile;
 import io.papermc.typewriter.SourceRewriter;
+import io.papermc.typewriter.util.ClassNamedView;
+import io.papermc.typewriter.util.ClassResolver;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
 public class SourceSetRewriterImpl<T extends SourceSetRewriter<T>> implements SourceSetRewriter<T> {
 
@@ -34,8 +38,33 @@ public class SourceSetRewriterImpl<T extends SourceSetRewriter<T>> implements So
 
     @Override
     public void apply(Path output) throws IOException {
+        final ClassResolver resolver = this.makeResolver(this.metadata.classpath());
+        final ClassNamedView view = new ClassNamedView(output, 20, null);
         for (Map.Entry<SourceFile, SourceRewriter> rewriter : this.rewrites.entrySet()) {
-            rewriter.getValue().writeToFile(output, this.metadata, rewriter.getKey());
+            rewriter.getValue().writeToFile(output, this.metadata, resolver, view, rewriter.getKey());
+        }
+    }
+
+    private ClassResolver makeResolver(Set<Path> classpath) {
+        class Holder {
+            public static final ClassResolver NOOP = new NoopClassResolver();
+        }
+        if (classpath.isEmpty()) {
+            return Holder.NOOP;
+        }
+
+        return new ClassResolver(classpath);
+    }
+
+    private static class NoopClassResolver extends ClassResolver {
+
+        public NoopClassResolver() {
+            super(Collections.emptySet());
+        }
+
+        @Override
+        public Optional<Class<?>> tryFind(String name) {
+            return Optional.empty();
         }
     }
 }

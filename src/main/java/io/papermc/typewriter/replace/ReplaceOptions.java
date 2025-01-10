@@ -128,7 +128,7 @@ public record ReplaceOptions(
          * @return the builder, for chaining
          */
         @Contract(value = "_ -> this", mutates = "this")
-        public Builder targetClass(ClassNamed nestedClass) {
+        public Builder targetClass(@Nullable ClassNamed nestedClass) {
             this.targetClass = nestedClass;
             return this;
         }

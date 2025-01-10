@@ -104,7 +104,6 @@ public class ImportNameCollector implements ImportCollector {
         return this.typeCache.computeIfAbsent(type, key -> {
             Optional<String> shortName = getShortName0(key, ImportCategory.TYPE); // regular import
             if (shortName.isEmpty() && key.knownClass() != null && Modifier.isStatic(key.knownClass().getModifiers())) {
-                // this is only supported when the class is known for now
                 shortName = getShortName0(key, ImportCategory.STATIC);
             }
 

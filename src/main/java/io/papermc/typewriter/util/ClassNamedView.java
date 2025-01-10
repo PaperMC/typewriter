@@ -3,7 +3,9 @@ package io.papermc.typewriter.util;
 import com.google.common.base.Preconditions;
 import io.papermc.typewriter.ClassNamed;
 import io.papermc.typewriter.SourceFile;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.checkerframework.framework.qual.DefaultQualifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,6 +24,7 @@ import java.util.stream.Stream;
  * The max depth represents the number of sub folders
  * taken into account.
  */
+@DefaultQualifier(NonNull.class)
 public class ClassNamedView {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ClassNamedView.class);

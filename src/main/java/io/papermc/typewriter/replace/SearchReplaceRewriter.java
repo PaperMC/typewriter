@@ -7,6 +7,7 @@ import io.papermc.typewriter.context.IndentUnit;
 import io.papermc.typewriter.SourceFile;
 import io.papermc.typewriter.context.ImportCollector;
 import io.papermc.typewriter.util.ClassNamedView;
+import io.papermc.typewriter.util.ClassResolver;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.framework.qual.DefaultQualifier;
@@ -31,6 +32,7 @@ public class SearchReplaceRewriter extends SearchReplaceRewriterBase {
 
     protected @MonotonicNonNull SourceFile source;
     protected @MonotonicNonNull SourcesMetadata sourcesMetadata;
+    protected @MonotonicNonNull ClassResolver classResolver;
     protected @MonotonicNonNull ClassNamedView classNamedView;
     protected @MonotonicNonNull ImportCollector importCollector;
 

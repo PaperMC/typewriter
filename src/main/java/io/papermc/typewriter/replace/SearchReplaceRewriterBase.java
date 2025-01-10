@@ -15,6 +15,7 @@ import io.papermc.typewriter.parser.StringReader;
 import io.papermc.typewriter.parser.exception.ReaderException;
 import io.papermc.typewriter.parser.token.pos.TokenCapture;
 import io.papermc.typewriter.util.ClassNamedView;
+import io.papermc.typewriter.util.ClassResolver;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.framework.qual.DefaultQualifier;
@@ -40,7 +41,7 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
     private static final Logger LOGGER = LoggerFactory.getLogger(SearchReplaceRewriterBase.class);
 
     @Override
-    public void writeToFile(Path parent, SourcesMetadata sourcesMetadata, SourceFile file) throws IOException {
+    public void writeToFile(Path parent, SourcesMetadata sourcesMetadata, ClassResolver resolver, ClassNamedView view, SourceFile file) throws IOException {
         Path filePath = file.path();
 
         final Path path = parent.resolve(filePath);
@@ -56,7 +57,7 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
             }
 
             ImportNameCollector collector = collectImport(file, lex);
-            this.setup(file, sourcesMetadata, new ClassNamedView(parent, 20, null), collector);
+            this.setup(file, sourcesMetadata, resolver, view, collector);
 
             try (LineNumberReader reader = new LineNumberReader(new CharArrayReader(lex.toCharArray()))) {
                 searchAndReplace(file, sourcesMetadata, reader, content);
@@ -69,7 +70,7 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
             destinationPath = path;
         } else {
             LOGGER.warn("Target source file '{}' doesn't exists, dumping rewriters data instead...", filePath);
-            this.setup(file, sourcesMetadata, new ClassNamedView(parent, 20, null), ImportCollector.NO_OP);
+            this.setup(file, sourcesMetadata, resolver, view, ImportCollector.NO_OP);
             dumpAll(file, sourcesMetadata, content);
             filePath = filePath.resolveSibling(filePath.getFileName() + ".dump");
             destinationPath = parent.resolve(filePath);
@@ -78,10 +79,11 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
         Files.writeString(destinationPath, content, StandardCharsets.UTF_8);
     }
 
-    private void setup(SourceFile source, SourcesMetadata sourcesMetadata, ClassNamedView classNamedView, @Nullable ImportCollector importCollector) {
+    private void setup(SourceFile source, SourcesMetadata sourcesMetadata, ClassResolver classResolver, ClassNamedView classNamedView, @Nullable ImportCollector importCollector) {
         this.getRewriters().forEach(rewriter -> {
             rewriter.source = source;
             rewriter.sourcesMetadata = sourcesMetadata;
+            rewriter.classResolver = classResolver;
             rewriter.classNamedView = classNamedView;
             rewriter.importCollector = importCollector;
         });
