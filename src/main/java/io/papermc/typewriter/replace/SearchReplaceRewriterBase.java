@@ -52,6 +52,7 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
             final Lexer lex;
             try (BufferedReader buffer = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
                 lex = Lexer.fromReader(buffer);
+                lex.checkMarkdownDocComments = !sourcesMetadata.canSkipMarkdownDocComments();
             } catch (ReaderException ex) {
                 throw ex.withAdditionalContext(file);
             }

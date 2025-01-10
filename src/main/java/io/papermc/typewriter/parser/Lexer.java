@@ -22,11 +22,12 @@ import java.util.Set;
 
 public class Lexer extends UnicodeTranslator implements Tokenizer {
 
-    private static final boolean CHECK_MARKDOWN_DOC_COMMENTS = !Boolean.getBoolean("typewriter.lexer.ignoreMarkdownDocComments");
-
     private final StringBuilder buffer; // generic buffer for single line element or used as temporary storage before being pushed into line buffer
     private final List<String> lineBuffer; // line buffer for multi line block
     private RelativeTextBlock textBlock; // text block support
+
+    // toggleable features
+    public boolean checkMarkdownDocComments = true;
 
     public Lexer(char[] input) {
         super(input);
@@ -448,7 +449,7 @@ public class Lexer extends UnicodeTranslator implements Tokenizer {
                     tokenPos.begin();
                     this.incrCursor();
                     if (match('/')) {
-                        if (CHECK_MARKDOWN_DOC_COMMENTS && match('/')) {
+                        if (this.checkMarkdownDocComments && match('/')) {
                             type = TokenType.MARKDOWN_JAVADOC;
                             this.readMarkdownJavadoc(tokenPos);
                         } else {

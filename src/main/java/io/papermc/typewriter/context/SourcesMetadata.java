@@ -1,5 +1,6 @@
 package io.papermc.typewriter.context;
 
+import com.google.common.base.Preconditions;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.framework.qual.DefaultQualifier;
 import org.jetbrains.annotations.Contract;
@@ -14,9 +15,11 @@ import java.util.function.UnaryOperator;
  *
  * @param importLayout the import layout used
  * @param indentUnit the default indent unit used if no one is found in the source file
+ * @param classpath the targeted classpath to resolve class reference during import parsing
+ * @param javaVersion the version of java the generated code must be compliant to
  */
 @DefaultQualifier(NonNull.class)
-public record SourcesMetadata(ImportLayout importLayout, IndentUnit indentUnit, Set<Path> classpath) {
+public record SourcesMetadata(ImportLayout importLayout, IndentUnit indentUnit, Set<Path> classpath, int javaVersion) {
 
     /**
      * Constructs a file metadata with the default import layout and
@@ -33,11 +36,16 @@ public record SourcesMetadata(ImportLayout importLayout, IndentUnit indentUnit, 
         return of(indentUnit, UnaryOperator.identity());
     }
 
+    public boolean canSkipMarkdownDocComments() {
+        return Boolean.getBoolean("typewriter.lexer.ignoreMarkdownDocComments") || this.javaVersion < 23;
+    }
+
     public static class Builder {
 
         private final IndentUnit indentUnit;
         private ImportLayout layout = ImportLayout.DEFAULT;
         private Set<Path> classpath = Collections.emptySet();
+        private int javaVersion = Runtime.version().feature();
 
         Builder(IndentUnit indentUnit) {
             this.indentUnit = indentUnit;
@@ -55,11 +63,19 @@ public record SourcesMetadata(ImportLayout importLayout, IndentUnit indentUnit, 
             return this;
         }
 
+        @Contract(value = "_ -> this", mutates = "this")
+        public Builder javaVersion(int featureVersion) {
+            Preconditions.checkArgument(featureVersion >= 0, "Feature version must be non-negative");
+            this.javaVersion = featureVersion;
+            return this;
+        }
+
         SourcesMetadata complete() {
             return new SourcesMetadata(
                 this.layout,
                 this.indentUnit,
-                this.classpath
+                this.classpath,
+                this.javaVersion
             );
         }
     }
