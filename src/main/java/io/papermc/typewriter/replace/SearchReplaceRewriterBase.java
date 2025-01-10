@@ -57,7 +57,8 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
                 throw ex.withAdditionalContext(file);
             }
 
-            ImportNameCollector collector = collectImport(file, lex);
+            final boolean includeModule = true /* todo sourcesMetadata.javaVersion() >= 25 */;
+            ImportNameCollector collector = collectImport(file, includeModule, resolver, lex);
             this.setup(file, sourcesMetadata, resolver, view, collector);
 
             try (LineNumberReader reader = new LineNumberReader(new CharArrayReader(lex.toCharArray()))) {
@@ -66,7 +67,7 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
 
             if (collector.isModified()) { // if added entries
                 // rewrite the imports
-                this.rewriteImports(collector, file.metadata().flatMap(FileMetadata::header).orElseGet(() -> sourcesMetadata.importLayout().getRelevantHeader(path, ImportHeader.DEFAULT)), content);
+                this.rewriteImports(collector, includeModule, file.metadata().flatMap(FileMetadata::header).orElseGet(() -> sourcesMetadata.importLayout().getRelevantHeader(path, ImportHeader.DEFAULT)), content);
             }
             destinationPath = path;
         } else {
@@ -111,9 +112,9 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
         }
     }
 
-    private ImportNameCollector collectImport(SourceFile source, Lexer lexer) {
-        final ImportNameCollector importCollector = new ImportNameCollector(source.mainClass());
-        ImportParser.collectImports(lexer, importCollector, source);
+    private ImportNameCollector collectImport(SourceFile source, boolean includeModule, ClassResolver resolver, Lexer lexer) {
+        final ImportNameCollector importCollector = new ImportNameCollector(source.mainClass(), resolver);
+        ImportParser.collectImports(lexer, importCollector, includeModule, source);
         return importCollector;
     }
 
@@ -210,9 +211,9 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
         }
     }
 
-    private void rewriteImports(ImportNameCollector collector, ImportHeader header, StringBuilder into) {
+    private void rewriteImports(ImportNameCollector collector, boolean includeModule, ImportHeader header, StringBuilder into) {
         Lexer lex = new Lexer(into.toString().toCharArray());
-        TokenCapture position = ImportParser.trackImportPosition(lex); // need to retrack this just in case other rewriters moved things around
+        TokenCapture position = ImportParser.trackImportPosition(lex, includeModule); // need to retrack this just in case other rewriters moved things around
         into.replace(position.start().cursor(), position.end().cursor(), collector.writeImports(header));
     }
 

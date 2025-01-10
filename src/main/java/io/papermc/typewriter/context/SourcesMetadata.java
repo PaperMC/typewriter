@@ -16,11 +16,23 @@ import java.util.function.UnaryOperator;
  *
  * @param importLayout the import layout used
  * @param indentUnit the default indent unit used if no one is found in the source file
- * @param classpath the targeted classpath to resolve class reference during import parsing
+ * @param classpath the targeted classpath to resolve class reference
  * @param javaVersion the version of java the generated code must be compliant to
  */
 @DefaultQualifier(NonNull.class)
 public record SourcesMetadata(ImportLayout importLayout, IndentUnit indentUnit, Set<Path> classpath, int javaVersion) {
+
+    /**
+     * Constructs a file metadata with a specified indent unit and further
+     * configuration if needed.
+     *
+     * @param indentUnit the indent unit
+     * @param builder the builder to configure further the metadata
+     * @return the file metadata
+     */
+    public static SourcesMetadata of(IndentUnit indentUnit, UnaryOperator<Builder> builder) {
+        return builder.apply(new Builder(indentUnit)).complete();
+    }
 
     /**
      * Constructs a file metadata with the default import layout and
@@ -29,16 +41,14 @@ public record SourcesMetadata(ImportLayout importLayout, IndentUnit indentUnit, 
      * @param indentUnit the indent unit
      * @return the file metadata
      */
-    public static SourcesMetadata of(IndentUnit indentUnit, UnaryOperator<Builder> builder) {
-        return builder.apply(new Builder(indentUnit)).complete();
-    }
-
     public static SourcesMetadata of(IndentUnit indentUnit) {
         return of(indentUnit, UnaryOperator.identity());
     }
 
+    private static final boolean ignoreMarkdownDocComments = Boolean.getBoolean("typewriter.lexer.ignoreMarkdownDocComments");
+
     public boolean canSkipMarkdownDocComments() {
-        return Boolean.getBoolean("typewriter.lexer.ignoreMarkdownDocComments") || this.javaVersion < 23;
+        return ignoreMarkdownDocComments || this.javaVersion < 23;
     }
 
     public static class Builder {

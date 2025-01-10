@@ -6,18 +6,11 @@ plugins {
     `maven-publish`
 }
 
-val classpathAware = sourceSets.create("classpathAware")
-
 java {
     withSourcesJar()
     withJavadocJar()
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
-    }
-    registerFeature("classpathAware") {
-        usingSourceSet(classpathAware)
-        withSourcesJar()
-        withJavadocJar()
     }
 }
 
@@ -29,10 +22,6 @@ val testData = sourceSets.create("testData")
 val testJavaPreviewVersion = providers.gradleProperty("testJavaPreviewVersion") // enable preview to test JEPs
 
 dependencies {
-    // Gradle doesn't seem to handle properly MRJ at the moment: https://github.com/gradle/gradle/issues/19587
-    // so that dependency must be explicitly applied on top for modular application that
-    // want the extension
-    "classpathAwareImplementation"("io.github.classgraph:classgraph:4.8.179")
     implementation("com.google.guava:guava:33.3.1-jre")
     implementation("org.apache.logging.log4j:log4j-core:2.24.3")
     implementation("org.slf4j:slf4j-api:2.0.17")

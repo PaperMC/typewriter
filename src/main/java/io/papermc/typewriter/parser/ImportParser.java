@@ -26,7 +26,7 @@ public final class ImportParser {
         TokenType.MARKDOWN_JAVADOC
     );
 
-    public static void collectImports(Tokenizer tokenizer, ImportCollector collector, SourceFile source) {
+    public static void collectImports(Tokenizer tokenizer, ImportCollector collector, boolean includeModule, SourceFile source) {
         SequenceTokens.wrap(tokenizer, FORMAT_TOKENS)
             .skip(TokenType.PACKAGE, action -> { // package <qualified name>;
                 action.skipQualifiedName().skip(TokenType.SECO);
@@ -36,6 +36,10 @@ public final class ImportParser {
                 action
                     .map(TokenType.STATIC, $ -> protoName.asCategory(ImportCategory.STATIC))
                     .orMap((token, reader) -> {
+                        if (!includeModule) {
+                            return false;
+                        }
+
                         if (token.type() == TokenType.IDENTIFIER && ((CharSequenceToken) token).value().equals(ImportCategory.MODULE.identity().orElseThrow())) {
                             PrintableToken nextToken = reader.next();
                             if (nextToken != null && nextToken.type() == TokenType.IDENTIFIER) {
@@ -67,7 +71,7 @@ public final class ImportParser {
             .executeOrThrow(failedTask -> failedTask.createFailure("Wrong token found while collecting imports").withAdditionalContext(source));
     }
 
-    public static TokenCapture trackImportPosition(Tokenizer tokenizer) {
+    public static TokenCapture trackImportPosition(Tokenizer tokenizer, boolean includeModule) {
         TokenRecorder.Default<PrintableToken> tokenPos = TokenRecorder.BETWEEN_TOKEN.record();
         SequenceTokens.wrap(tokenizer, FORMAT_TOKENS)
             .skip(TokenType.PACKAGE, action -> { // package <qualified name>;
@@ -77,6 +81,10 @@ public final class ImportParser {
                 action
                     .skip(TokenType.STATIC)
                     .orSkip((token, reader) -> {
+                        if (!includeModule) {
+                            return false;
+                        }
+
                         if (token.type() == TokenType.IDENTIFIER && ((CharSequenceToken) token).value().equals(ImportCategory.MODULE.identity().orElseThrow())) {
                             PrintableToken nextToken = reader.next();
                             if (nextToken != null && nextToken.type() == TokenType.IDENTIFIER) {

@@ -7,6 +7,7 @@ import io.papermc.typewriter.util.ClassNamedView;
 import io.papermc.typewriter.util.ClassResolver;
 
 import java.io.IOException;
+import java.lang.module.ModuleReference;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -46,17 +47,15 @@ public class SourceSetRewriterImpl<T extends SourceSetRewriter<T>> implements So
     }
 
     private ClassResolver makeResolver(Set<Path> classpath) {
-        class Holder {
-            public static final ClassResolver NOOP = new NoopClassResolver();
-        }
         if (classpath.isEmpty()) {
-            return Holder.NOOP;
+            return NoopClassResolver.INSTANCE;
         }
 
         return new ClassResolver(classpath);
     }
 
     private static class NoopClassResolver extends ClassResolver {
+        public static final ClassResolver INSTANCE = new NoopClassResolver();
 
         public NoopClassResolver() {
             super(Collections.emptySet());
@@ -64,6 +63,11 @@ public class SourceSetRewriterImpl<T extends SourceSetRewriter<T>> implements So
 
         @Override
         public Optional<Class<?>> tryFind(String name) {
+            return Optional.empty();
+        }
+
+        @Override
+        public Optional<ModuleReference> tryFindModule(String name) {
             return Optional.empty();
         }
     }
