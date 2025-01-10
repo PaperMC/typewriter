@@ -31,7 +31,7 @@ public class ParserTest {
 
     protected void collectImportsFrom(Path path, ImportCollector importCollector) throws IOException {
         try (BufferedReader reader = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
-            ImportParser.collectImports(Lexer.fromReader(reader), importCollector, SourceFile.of(CONTAINER.relativize(path)));
+            ImportParser.collectImports(Lexer.fromReader(reader), importCollector, true, SourceFile.of(CONTAINER.relativize(path)));
         }
     }
 

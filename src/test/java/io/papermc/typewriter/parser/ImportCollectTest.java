@@ -11,6 +11,7 @@ import io.papermc.typewriter.ClassNamed;
 import io.papermc.typewriter.context.ImportCategory;
 import io.papermc.typewriter.context.ImportSet;
 import io.papermc.typewriter.context.ImportNameCollector;
+import io.papermc.typewriter.util.ClassResolver;
 import io.papermc.typewriter.yaml.ImportMapping;
 import io.papermc.typewriter.yaml.YamlMappingConverter;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -51,7 +52,7 @@ public class ImportCollectTest extends ParserTest {
     public void testImports(Path path,
                             Class<?> sampleClass,
                             @ConvertWith(ImportMappingConverter.class) ImportMapping expected) throws IOException {
-        final ImportNameCollector importCollector = new ImportNameCollector(new ClassNamed(sampleClass));
+        final ImportNameCollector importCollector = new ImportNameCollector(new ClassNamed(sampleClass), ClassResolver.atRuntime());
         collectImportsFrom(path, importCollector);
 
         String name = sampleClass.getSimpleName();

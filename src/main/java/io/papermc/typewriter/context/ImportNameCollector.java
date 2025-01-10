@@ -6,20 +6,20 @@ import io.papermc.typewriter.ClassNamed;
 import io.papermc.typewriter.context.layout.ImportHeader;
 import io.papermc.typewriter.context.layout.ImportScheme;
 import io.papermc.typewriter.parser.name.ProtoImportName;
-import io.papermc.typewriter.util.ClassGraphBridge;
+import io.papermc.typewriter.util.ClassHelper;
+import io.papermc.typewriter.util.ClassResolver;
 import javax.lang.model.SourceVersion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.module.FindException;
 import java.lang.module.ModuleDescriptor;
-import java.lang.module.ModuleFinder;
 import java.lang.module.ModuleReference;
 import java.lang.reflect.Modifier;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.StringJoiner;
@@ -30,24 +30,18 @@ public class ImportNameCollector implements ImportCollector {
     private static final Logger LOGGER = LoggerFactory.getLogger(ImportNameCollector.class);
     private static final String JAVA_LANG_PACKAGE = "java.lang";
 
-    private static final Supplier<ModuleFinder> finderFactory;
-    private static ModuleFinder finder;
-    static {
-        ModuleFinder runtime = ClassGraphBridge.runtimeFinder();
-        ModuleFinder system = ModuleFinder.ofSystem();
-        finderFactory = () -> runtime == null ? system : ModuleFinder.compose(system, runtime);;
-    }
-
     private final Map<ClassNamed, String> typeCache = new HashMap<>();
     private final ImportNameMap importMap = new ImportNameMap();
 
     private final ClassNamed mainClass;
-    private final String moduleName;
+    private final ClassResolver resolver;
+    private final Supplier<String> targetModuleName;
     private boolean modified;
 
-    public ImportNameCollector(ClassNamed mainClass) {
+    public ImportNameCollector(ClassNamed mainClass, ClassResolver resolver) {
         this.mainClass = mainClass;
-        this.moduleName = ClassGraphBridge.getModuleName(mainClass);
+        this.resolver = resolver;
+        this.targetModuleName = Suppliers.memoize(() -> ClassHelper.getModuleName(Objects.requireNonNull(mainClass.resolve(resolver).knownClass())));
     }
 
     @Override
@@ -114,21 +108,12 @@ public class ImportNameCollector implements ImportCollector {
     }
 
     private boolean isPackageExported(String moduleName, String packageName) {
-        if (finder == null) {
-            finder = finderFactory.get();
-        }
-
-        Optional<ModuleReference> referenceOpt = Optional.empty();
-        try {
-            referenceOpt = finder.find(moduleName);
-        } catch (FindException ignored) {
-            finder = finderFactory.get();
-        }
-
+        Optional<ModuleReference> referenceOpt = this.resolver.tryFindModule(moduleName);
         if (referenceOpt.isPresent()) {
             ModuleDescriptor descriptor = referenceOpt.get().descriptor();
             for (ModuleDescriptor.Exports export : descriptor.exports()) {
-                if (this.moduleName != null && export.isQualified() && !export.targets().contains(this.moduleName)) {
+                String targetModuleName = this.targetModuleName.get();
+                if (targetModuleName != null && export.isQualified() && !export.targets().contains(targetModuleName)) {
                     continue;
                 }
 

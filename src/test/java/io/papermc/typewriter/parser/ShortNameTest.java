@@ -3,6 +3,7 @@ package io.papermc.typewriter.parser;
 import io.papermc.typewriter.ClassNamed;
 import io.papermc.typewriter.context.ImportCategory;
 import io.papermc.typewriter.context.ImportNameCollector;
+import io.papermc.typewriter.util.ClassResolver;
 import io.papermc.typewriter.yaml.ShortNameMapping;
 import io.papermc.typewriter.yaml.YamlMappingConverter;
 import name.GlobalImportType;
@@ -27,11 +28,8 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ShortNameTest extends ParserTest {
 
@@ -62,7 +60,7 @@ public class ShortNameTest extends ParserTest {
                              Class<?> sampleClass,
                              @ConvertWith(ShortNameMappingConverter.class) ShortNameMapping mapping) throws IOException {
         String name = sampleClass.getSimpleName();
-        final ImportNameCollector importCollector = new ImportNameCollector(new ClassNamed(sampleClass));
+        final ImportNameCollector importCollector = new ImportNameCollector(new ClassNamed(sampleClass), ClassResolver.atRuntime());
         collectImportsFrom(path, importCollector);
 
         assertFalse(mapping.getShortNames() == null && mapping.getMemberShortNames() == null, "Empty expected import mapping!");

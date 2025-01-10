@@ -10,6 +10,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.framework.qual.DefaultQualifier;
 import org.jetbrains.annotations.Contract;
 
+import java.util.NoSuchElementException;
 import java.util.Objects;
 
 @DefaultQualifier(NonNull.class)
@@ -76,7 +77,11 @@ public record ClassNamed(String packageName, String simpleName, String dottedNes
     }
 
     public ClassNamed resolve(ClassResolver resolver) {
-        return resolver.resolveOrThrow(this);
+        try {
+            return resolver.resolveOrThrow(this);
+        } catch (NoSuchElementException ex) {
+            throw new RuntimeException("Cannot resolve class " + this, ex);
+        }
     }
 
     public ClassNamed topLevel() {
