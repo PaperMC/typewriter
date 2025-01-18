@@ -425,10 +425,14 @@ public class Lexer extends UnicodeTranslator implements Tokenizer {
     public Token readToken() {
         TokenType type = null;
         TokenSnapshot.Constant<Lexer> snapshot = TokenRecorder.LEXER_INSTANT;
-        TokenRecorder.Constant tokenPos = snapshot.record(this);
+        TokenRecorder.Constant tokenPos = null;
         AbsolutePos singlePos = null;
     loop:
         while (this.canRead()) {
+            if (tokenPos == null || tokenPos.isInProgress()) {
+                tokenPos = snapshot.record(this);
+                // either create the first token pos or override the current one, might happen for incomplete tokens i.e. a/b (ID, start of (doc)comment, ID)
+            }
             char c = this.peek();
             switch (c) {
                 case ' ':
