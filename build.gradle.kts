@@ -63,6 +63,19 @@ publishing {
         artifactId = rootProject.name
         from(components["java"])
     }
+
+    repositories {
+        val isSnapshot = rootProject.version.toString().endsWith("-SNAPSHOT")
+        val url = if (isSnapshot) {
+            "https://repo.papermc.io/repository/maven-snapshots/"
+        } else {
+            "https://repo.papermc.io/repository/maven-releases/"
+        }
+        maven(url) {
+            name = "papermc"
+            credentials(PasswordCredentials::class)
+        }
+    }
 }
 
 tasks.register("printVersion") {
