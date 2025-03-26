@@ -71,8 +71,35 @@ public class ClassNamedView {
         return this.findFirstFile(name).map(SourceFile::mainClass);
     }
 
+    public Stream<ClassNamed> find(String name) {
+        int dotIndex = name.indexOf('.');
+        final String fileName;
+        @Nullable String nestedClassNames;
+        if (dotIndex != -1) { // take in account nested names
+            fileName = name.substring(0, dotIndex);
+            nestedClassNames = name.substring(dotIndex + 1);
+        } else {
+            fileName = name;
+            nestedClassNames = null;
+        }
+
+        return this.findFile(fileName)
+            .map(file -> {
+            if (nestedClassNames != null) {
+                ClassNamed clazz = file.mainClass();
+                return ClassNamed.of(
+                    clazz.packageName(),
+                    clazz.simpleName(),
+                    nestedClassNames
+                );
+            }
+
+            return file.mainClass();
+        });
+    }
+
     public Optional<SourceFile> findFirstFile(String name) {
-        try (Stream<SourceFile> stream = this.findFile(name)) { // handle conflict
+        try (Stream<SourceFile> stream = this.findFile(name)) {
             return stream.findFirst();
         }
     }

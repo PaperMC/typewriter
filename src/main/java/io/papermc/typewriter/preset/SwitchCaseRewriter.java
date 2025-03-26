@@ -14,13 +14,10 @@ public abstract class SwitchCaseRewriter extends SearchReplaceRewriter {
 
     protected abstract Iterable<String> getCases();
 
-    @Override
-    public boolean registerFor(SourceFile file) {
-        boolean canRegister = super.registerFor(file);
-        if (canRegister) {
+    private void populateCases() {
+        if (this.cases == null) {
             this.cases = this.getCases().iterator();
         }
-        return canRegister;
     }
 
     private void appendCase(StringBuilder builder, SearchMetadata metadata) {
@@ -30,12 +27,14 @@ public abstract class SwitchCaseRewriter extends SearchReplaceRewriter {
 
     @Override
     protected void replaceLine(SearchMetadata metadata, StringBuilder builder) {
+        this.populateCases();
         Preconditions.checkState(this.cases.hasNext(), "Switch case size doesn't match between generated values and replaced values.");
         appendCase(builder, metadata);
     }
 
     @Override
     protected void insert(SearchMetadata metadata, StringBuilder builder) {
+        this.populateCases();
         while (this.cases.hasNext()) {
             appendCase(builder, metadata);
         }
