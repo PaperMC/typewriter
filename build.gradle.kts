@@ -21,15 +21,15 @@ val testData = sourceSets.create("testData")
 
 dependencies {
     implementation("com.google.guava:guava:33.3.1-jre")
-    implementation("org.apache.logging.log4j:log4j-core:2.24.2")
-    implementation("org.slf4j:slf4j-api:2.0.16")
+    implementation("org.apache.logging.log4j:log4j-core:2.24.3")
+    implementation("org.slf4j:slf4j-api:2.0.17")
 
-    compileOnly("org.checkerframework:checker-qual:3.48.3")
-    compileOnly("org.jetbrains:annotations:26.0.1")
+    compileOnly("org.checkerframework:checker-qual:3.49.2")
+    compileOnly("org.jetbrains:annotations:26.0.2")
 
-    testImplementation("org.junit.jupiter:junit-jupiter:5.11.3")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.12.2")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-    testImplementation("org.yaml:snakeyaml:2.3")
+    testImplementation("org.yaml:snakeyaml:2.4")
     testImplementation(testData.output)
 }
 
