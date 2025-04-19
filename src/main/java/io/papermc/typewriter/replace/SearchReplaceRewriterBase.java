@@ -75,6 +75,7 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
             dumpAll(file, sourcesMetadata, content);
             filePath = filePath.resolveSibling(filePath.getFileName() + ".dump");
             destinationPath = parent.resolve(filePath);
+            Files.createDirectories(destinationPath.getParent());
         }
 
         Files.writeString(destinationPath, content, StandardCharsets.UTF_8);
