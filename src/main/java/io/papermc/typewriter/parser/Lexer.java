@@ -443,10 +443,6 @@ public class Lexer extends UnicodeTranslator implements Tokenizer {
                 // either create the first token pos or override the current one, might happen for incomplete tokens i.e. a/b (ID, start of (doc)comment, ID)
             }
             char c = this.peek();
-            if (tokenPos == null || tokenPos.isInProgress()) {
-                tokenPos = snapshot.record(this);
-                // either create the first token pos or override the current one, might happen for incomplete tokens i.e. a/b (ID, start of (doc)comment, ID)
-            }
             switch (c) {
                 case ' ':
                 case '\t':
