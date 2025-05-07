@@ -15,6 +15,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.EnumSet;
+import java.util.Set;
 import java.util.function.Consumer;
 
 import static io.papermc.typewriter.parser.ParserAssertions.assertIdentifier;
@@ -27,11 +28,12 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 @Tag("parser")
 public class ParserTest {
 
+    protected static final Set<JavaFeature> FEATURES = EnumSet.allOf(JavaFeature.class);
     protected static final Path CONTAINER = Path.of(System.getProperty("user.dir"), "src/testData/java");
 
     protected void collectImportsFrom(Path path, ImportCollector importCollector) throws IOException {
         try (BufferedReader reader = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
-            ImportParser.collectImports(Lexer.fromReader(reader), importCollector, true, SourceFile.of(CONTAINER.relativize(path)));
+            ImportParser.collectImports(Lexer.fromReader(reader, FEATURES), importCollector, SourceFile.of(CONTAINER.relativize(path)));
         }
     }
 
@@ -64,7 +66,7 @@ public class ParserTest {
     protected void parseJavaFile(Path path, EnumSet<Modifier> classModifiers, String classType, Consumer<TokenAccessor> callback) throws IOException {
         final Lexer lexer;
         try (BufferedReader reader = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
-            lexer = Lexer.fromReader(reader);
+            lexer = Lexer.fromReader(reader, FEATURES);
         }
 
         TokenAccessor accessor = TokenAccessor.wrap(lexer);
@@ -92,7 +94,7 @@ public class ParserTest {
     }
 
     protected void parseJava(String content, Consumer<TokenAccessor> callback) {
-        Lexer lexer = new Lexer(content.toCharArray());
+        Lexer lexer = new Lexer(content.toCharArray(), FEATURES);
         TokenAccessor accessor = TokenAccessor.wrap(lexer);
         callback.accept(accessor);
         assertSame(Token.END_OF_INPUT, lexer.readToken(), "Unexpected token found: not end of stream");

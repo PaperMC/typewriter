@@ -62,11 +62,11 @@ public record IndentUnit(String content, int size, char character) implements Ch
     }
 
     public String adjustContentFor(ClassNamed enclosingClass) {
-        if (enclosingClass.knownClass() == null) {
+        if (enclosingClass.reference() == null) {
             return this.content.repeat(this.countOccurrences(enclosingClass.dottedNestedName(), '.') + 1);
         }
 
-        Class<?> parent = enclosingClass.knownClass().getEnclosingClass();
+        Class<?> parent = enclosingClass.reference().getEnclosingClass();
         StringBuilder indentBuilder = new StringBuilder(this.content);
         while (parent != null) {
             indentBuilder.append(this.content);

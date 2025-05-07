@@ -52,7 +52,7 @@ public class ImportCollectTest extends ParserTest {
     public void testImports(Path path,
                             Class<?> sampleClass,
                             @ConvertWith(ImportMappingConverter.class) ImportMapping expected) throws IOException {
-        final ImportNameCollector importCollector = new ImportNameCollector(new ClassNamed(sampleClass), ClassResolver.atRuntime());
+        final ImportNameCollector importCollector = new ImportNameCollector(ClassNamed.of(sampleClass), ClassResolver.atRuntime());
         collectImportsFrom(path, importCollector);
 
         String name = sampleClass.getSimpleName();

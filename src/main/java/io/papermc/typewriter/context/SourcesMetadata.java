@@ -2,12 +2,14 @@ package io.papermc.typewriter.context;
 
 import com.google.common.base.Preconditions;
 import io.papermc.typewriter.context.layout.ImportLayout;
+import io.papermc.typewriter.parser.JavaFeature;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.framework.qual.DefaultQualifier;
 import org.jetbrains.annotations.Contract;
 
 import java.nio.file.Path;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.Set;
 import java.util.function.UnaryOperator;
 
@@ -45,10 +47,14 @@ public record SourcesMetadata(ImportLayout importLayout, IndentUnit indentUnit, 
         return of(indentUnit, UnaryOperator.identity());
     }
 
-    private static final boolean ignoreMarkdownDocComments = Boolean.getBoolean("typewriter.lexer.ignoreMarkdownDocComments");
-
-    public boolean canSkipMarkdownDocComments() {
-        return ignoreMarkdownDocComments || this.javaVersion < 23;
+    public Set<JavaFeature> getFeatures() {
+        Set<JavaFeature> features = EnumSet.noneOf(JavaFeature.class);
+        for (JavaFeature feature : JavaFeature.values()) {
+            if (this.javaVersion >= feature.requiredVersion) {
+                features.add(feature);
+            }
+        }
+        return features;
     }
 
     public static class Builder {

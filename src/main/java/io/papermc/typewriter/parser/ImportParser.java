@@ -26,7 +26,7 @@ public final class ImportParser {
         TokenType.MARKDOWN_JAVADOC
     );
 
-    public static void collectImports(Tokenizer tokenizer, ImportCollector collector, boolean includeModule, SourceFile source) {
+    public static void collectImports(Tokenizer tokenizer, ImportCollector collector, SourceFile source) {
         SequenceTokens.wrap(tokenizer, FORMAT_TOKENS)
             .skip(TokenType.PACKAGE, action -> { // package <qualified name>;
                 action.skipQualifiedName().skip(TokenType.SECO);
@@ -35,29 +35,31 @@ public final class ImportParser {
                 ProtoImportName protoName = new ProtoImportName();
                 action
                     .map(TokenType.STATIC, $ -> protoName.asCategory(ImportCategory.STATIC))
-                    .orMap((token, reader) -> {
-                        if (!includeModule) {
-                            return false;
-                        }
-
-                        if (token.type() == TokenType.IDENTIFIER && ((CharSequenceToken) token).value().equals(ImportCategory.MODULE.identity().orElseThrow())) {
-                            PrintableToken nextToken = reader.next();
-                            if (nextToken != null && nextToken.type() == TokenType.IDENTIFIER) {
-                                return true;
-                            } else {
-                                // module is a contextual keyword meaning it can be used as a regular identifier elsewhere
-                                // if the qualified name starts with "module" it should *not* be considered as a module import
-                                // import module A; <-/-> import module.A;
-                                reader.reset();
+                    .or(subAction -> {
+                        subAction.map((token, reader) -> {
+                            if (!tokenizer.getFeatures().contains(JavaFeature.MODULE_IMPORT)) {
+                                return false;
                             }
-                        }
-                        return false;
-                    },token -> protoName.asCategory(ImportCategory.MODULE), TokenTaskBuilder::asOptional)
+
+                            if (token.type() == TokenType.IDENTIFIER && ((CharSequenceToken) token).value().equals(ImportCategory.MODULE.identity().orElseThrow())) {
+                                PrintableToken nextToken = reader.next();
+                                if (nextToken != null && nextToken.type() == TokenType.IDENTIFIER) {
+                                    return true;
+                                } else {
+                                    // module is a contextual keyword meaning it can be used as a regular identifier elsewhere
+                                    // if the qualified name starts with "module" it should *not* be considered as a module import
+                                    // import module A; <-/-> import module.A;
+                                    reader.reset();
+                                }
+                            }
+                            return false;
+                        }, token -> protoName.asCategory(ImportCategory.MODULE), TokenTaskBuilder::asOptional);
+                    })
                     .mapQualifiedName(
                         name -> protoName.append(name.value()),
                         dot -> protoName.appendSeparator(),
                         partialAction -> partialAction
-                            .map(TokenType.STAR, star -> {
+                            .map(type -> protoName.getCategory() != ImportCategory.MODULE && type == TokenType.STAR, star -> {
                                 protoName.append(TokenType.STAR.value);
                                 protoName.asGlobal();
                             })
@@ -68,10 +70,10 @@ public final class ImportParser {
                 },
                 params -> params.asOptional().asRepeatable()
             )
-            .executeOrThrow(failedTask -> failedTask.createFailure("Wrong token found while collecting imports").withAdditionalContext(source));
+            .executeOrThrow((failedTask, token) -> failedTask.createFailure("Wrong token found while collecting imports", token).withAdditionalContext(source));
     }
 
-    public static TokenCapture trackImportPosition(Tokenizer tokenizer, boolean includeModule) {
+    public static TokenCapture trackImportPosition(Tokenizer tokenizer) {
         TokenRecorder.Default<PrintableToken> tokenPos = TokenRecorder.BETWEEN_TOKEN.record();
         SequenceTokens.wrap(tokenizer, FORMAT_TOKENS)
             .skip(TokenType.PACKAGE, action -> { // package <qualified name>;
@@ -80,24 +82,26 @@ public final class ImportParser {
             .skip(TokenType.IMPORT, action -> {
                 action
                     .skip(TokenType.STATIC)
-                    .orSkip((token, reader) -> {
-                        if (!includeModule) {
-                            return false;
-                        }
-
-                        if (token.type() == TokenType.IDENTIFIER && ((CharSequenceToken) token).value().equals(ImportCategory.MODULE.identity().orElseThrow())) {
-                            PrintableToken nextToken = reader.next();
-                            if (nextToken != null && nextToken.type() == TokenType.IDENTIFIER) {
-                                return true;
-                            } else {
-                                // module is a contextual keyword meaning it can be used as a regular identifier elsewhere
-                                // if the qualified name starts with "module" it should *not* be considered as a module import
-                                // import module A; <-/-> import module.A;
-                                reader.reset();
+                    .or(subAction -> {
+                        subAction.skip((token, reader) -> {
+                            if (!tokenizer.getFeatures().contains(JavaFeature.MODULE_IMPORT)) {
+                                return false;
                             }
-                        }
-                        return false;
-                    }, TokenTaskBuilder::asOptional)
+
+                            if (token.type() == TokenType.IDENTIFIER && ((CharSequenceToken) token).value().equals(ImportCategory.MODULE.identity().orElseThrow())) {
+                                PrintableToken nextToken = reader.next();
+                                if (nextToken != null && nextToken.type() == TokenType.IDENTIFIER) {
+                                    return true;
+                                } else {
+                                    // module is a contextual keyword meaning it can be used as a regular identifier elsewhere
+                                    // if the qualified name starts with "module" it should *not* be considered as a module import
+                                    // import module A; <-/-> import module.A;
+                                    reader.reset();
+                                }
+                            }
+                            return false;
+                        }, TokenTaskBuilder::asOptional);
+                    })
                     .skipQualifiedName((SequenceTokens partialAction) -> partialAction.skip(TokenType.STAR))
                     .map(TokenType.SECO, tokenPos::end);
                 },
@@ -105,7 +109,7 @@ public final class ImportParser {
                     manager.bind(HookType.FIRST, hook -> hook.pre(tokenPos::begin));
                 })
             )
-            .executeOrThrow(failedTask -> failedTask.createFailure("Wrong token found while tracking import section position"));
+            .executeOrThrow((failedTask, token) -> failedTask.createFailure("Wrong token found while tracking import section position", token));
         return tokenPos.fetch();
     }
 

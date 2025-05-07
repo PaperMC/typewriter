@@ -22,7 +22,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.StringJoiner;
 import java.util.function.Supplier;
 
 public class ImportNameCollector implements ImportCollector {
@@ -41,33 +40,19 @@ public class ImportNameCollector implements ImportCollector {
     public ImportNameCollector(ClassNamed mainClass, ClassResolver resolver) {
         this.mainClass = mainClass;
         this.resolver = resolver;
-        this.targetModuleName = Suppliers.memoize(() -> ClassHelper.getModuleName(Objects.requireNonNull(mainClass.resolve(resolver).knownClass())));
+        this.targetModuleName = Suppliers.memoize(() -> ClassHelper.getModuleName(Objects.requireNonNull(mainClass.resolve(resolver).reference())));
     }
 
     @Override
-    public void addImport(ClassNamed type) {
+    public void addSingleImport(ClassNamed type) {
         if (this.importMap.add(new ImportName.Type(type))) {
             this.modified = true;
         }
     }
 
     @Override
-    public void addImport(String name) {
-        if (this.importMap.add(ImportName.Type.fromQualifiedName(name))) {
-            this.modified = true;
-        }
-    }
-
-    @Override
-    public void addStaticImport(String name) {
-        if (this.importMap.add(ImportName.Static.fromQualifiedMemberName(name))) {
-            this.modified = true;
-        }
-    }
-
-    @Override
-    public void addModuleImport(String name) {
-        if (this.importMap.add(ImportName.Module.fromQualifiedName(name))) {
+    public void addImport(ImportCategory<? extends ImportName> category, String name) {
+        if (this.importMap.add(category.parse(name))) {
             this.modified = true;
         }
     }
@@ -87,7 +72,28 @@ public class ImportNameCollector implements ImportCollector {
     // only check conflict, duplicate imports (with import on demand type) are not checked but the file should compile
     @Override
     public boolean canImportSafely(ClassNamed type) {
-        return this.importMap.canImportSafely(type);
+        for (ImportName.Type name : this.importMap.get(ImportCategory.TYPE)) {
+            if (name.isGlobal()) {
+                continue;
+            }
+
+            if (type.simpleName().equals(name.id())) {
+                return false;
+            }
+        }
+
+        // while this is not always required it ensure clarity of the source file
+        for (ImportName.Static name : this.importMap.get(ImportCategory.STATIC)) {
+            if (name.isGlobal()) {
+                continue;
+            }
+
+            if (type.simpleName().equals(name.id())) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     @Override
@@ -108,7 +114,7 @@ public class ImportNameCollector implements ImportCollector {
     }
 
     private boolean isPackageExported(String moduleName, String packageName) {
-        Optional<ModuleReference> referenceOpt = this.resolver.tryFindModule(moduleName);
+        Optional<ModuleReference> referenceOpt = this.resolver.findModule(moduleName);
         if (referenceOpt.isPresent()) {
             ModuleDescriptor descriptor = referenceOpt.get().descriptor();
             for (ModuleDescriptor.Exports export : descriptor.exports()) {
@@ -151,7 +157,7 @@ public class ImportNameCollector implements ImportCollector {
         ClassNamed foundClass = type;
     loop:
         while (foundClass != null) {
-            if (category == ImportCategory.STATIC && !Modifier.isStatic(foundClass.knownClass().getModifiers())) {
+            if (category == ImportCategory.STATIC && !Modifier.isStatic(foundClass.reference().getModifiers())) {
                 // static imports are allowed for regular class too but only when the inner classes are all static
                 return Optional.empty();
             }
@@ -180,7 +186,7 @@ public class ImportNameCollector implements ImportCollector {
             if (shortName.isEmpty()) {
                 shortName = getShortName0(key, ImportCategory.MODULE, (name, klass, enclosingKlass) -> isUsed(name, klass));
             }
-            if (shortName.isEmpty() && key.knownClass() != null && Modifier.isStatic(key.knownClass().getModifiers())) {
+            if (shortName.isEmpty() && key.reference() != null && Modifier.isStatic(key.reference().getModifiers())) {
                 shortName = getShortName0(key, ImportCategory.STATIC, this::isUsed);
             }
 
@@ -194,8 +200,8 @@ public class ImportNameCollector implements ImportCollector {
 
                 if (autoImport) {
                     ClassNamed topType = key.topLevel();
-                    if (this.importMap.canImportSafely(topType)) {
-                        this.addImport(topType.canonicalName()); // only import top level, nested class are rarely imported directly
+                    if (this.canImportSafely(topType)) {
+                        this.addSingleImport(topType); // only import top level, nested class are rarely imported directly
                         return key.dottedNestedName();
                     }
                 }
@@ -203,12 +209,6 @@ public class ImportNameCollector implements ImportCollector {
                 return key.canonicalName();
             });
         });
-    }
-
-    private String printImportStatement(ImportName type) {
-        StringBuilder builder = new StringBuilder();
-        printImportStatement(builder, type);
-        return builder.toString();
     }
 
     private void printImportStatement(StringBuilder builder, ImportName type) {
@@ -246,9 +246,14 @@ public class ImportNameCollector implements ImportCollector {
 
         if (!remainingImports.isEmpty()) {
             builder.deleteCharAt(builder.length() - 1);
-            StringJoiner joiner = new StringJoiner("", "- ", "\n");
-            remainingImports.forEach(name -> joiner.add(printImportStatement(name)));
-            LOGGER.error("Some imports have been skipped since the import layout is not defined for them!\n{}", joiner.toString());
+
+            LOGGER.error("Some imports have been skipped since the import layout is not defined for them!");
+            remainingImports.forEach(name -> {
+                StringBuilder log = new StringBuilder();
+                log.append("- ");
+                printImportStatement(log, name);
+                LOGGER.error(log.toString());
+            });
         }
 
         return builder.toString();

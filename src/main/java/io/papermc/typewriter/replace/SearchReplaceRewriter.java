@@ -6,6 +6,8 @@ import io.papermc.typewriter.context.SourcesMetadata;
 import io.papermc.typewriter.context.IndentUnit;
 import io.papermc.typewriter.SourceFile;
 import io.papermc.typewriter.context.ImportCollector;
+import io.papermc.typewriter.parser.Lexer;
+import io.papermc.typewriter.parser.Tokenizer;
 import io.papermc.typewriter.util.ClassNamedView;
 import io.papermc.typewriter.util.ClassResolver;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
@@ -41,6 +43,10 @@ public class SearchReplaceRewriter extends SearchReplaceRewriterBase {
 
     public IndentUnit indentUnit() {
         return this.source.metadata().flatMap(FileMetadata::indentUnit).orElse(this.sourcesMetadata.indentUnit());
+    }
+
+    public Tokenizer createTokenizer(String content) {
+        return new Lexer(content.toCharArray(), this.sourcesMetadata.getFeatures());
     }
 
     @Contract(value = "_ -> this", mutates = "this")

@@ -34,20 +34,29 @@ public class TokenTask implements TokenTaskThrowable {
         return this.repeatable;
     }
 
-    public PrintableToken getLastInput() {
-        return this.lastInput;
-    }
-
     boolean alreadyRan() {
         return this.lastInput != null;
     }
 
     boolean run(Token token, SequenceTokens executor) {
+        boolean alreadyRan = alreadyRan();
+        if (isRepeatable() && !alreadyRan) {
+            runHook(HookType.FIRST, hook -> hook.pre().call(token));
+        }
+
+        runHook(HookType.EVERY, hook -> hook.pre().call(token));
+        boolean success = this.action.execute(token, executor);
+        runHook(HookType.EVERY, hook -> hook.post().call(token));
+
+        if (isRepeatable() && (success ? (alreadyRan && !executor.iterator().hasNext()) : (alreadyRan || isOptional()))) { // based in SequenceTokens#execute poll
+            runHook(HookType.LAST, hook -> hook.post().call(token));
+        }
+
         this.lastInput = (PrintableToken) token;
-        return this.action.execute(token, executor);
+        return success;
     }
 
-    void runHook(HookType type, Consumer<Callback> callback) {
+    private void runHook(HookType type, Consumer<Callback> callback) {
         if (this.hookManager == null) {
             return;
         }
@@ -101,14 +110,14 @@ public class TokenTask implements TokenTaskThrowable {
     }
 
     @Override
-    public FailureException createFailure(String message) {
-        return new FailureException(message);
+    public FailureException createFailure(String message, PrintableToken token) {
+        return new FailureException(message, token);
     }
 
     public class FailureException extends ParserException {
 
-        public FailureException(String message) {
-            super(message, TokenTask.this.lastInput);
+        public FailureException(String message, PrintableToken token) {
+            super(message, token);
         }
 
         @Override

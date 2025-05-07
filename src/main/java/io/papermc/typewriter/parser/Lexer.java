@@ -16,32 +16,41 @@ import java.io.CharArrayWriter;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 public class Lexer extends UnicodeTranslator implements Tokenizer {
 
+    private final Set<JavaFeature> features;
     private final StringBuilder buffer; // generic buffer for single line element or used as temporary storage before being pushed into line buffer
     private final List<String> lineBuffer; // line buffer for multi line block
     private RelativeTextBlock textBlock; // text block support
 
-    // toggleable features
-    public boolean checkMarkdownDocComments = true;
-
     public Lexer(char[] input) {
+        this(input, EnumSet.noneOf(JavaFeature.class));
+    }
+
+    public Lexer(char[] input, Set<JavaFeature> features) {
         super(input);
+        this.features = features;
         this.buffer = new StringBuilder();
         this.lineBuffer = new ArrayList<>(5);
     }
 
-    public static Lexer fromReader(Reader reader) throws IOException { // might find a better way maybe more lazy too
+    public static Lexer fromReader(Reader reader, Set<JavaFeature> features) throws IOException { // might find a better way maybe more lazy too
         CharArrayWriter w = new CharArrayWriter(2048);
         int code;
         while ((code = reader.read()) != -1) {
             w.append((char) code);
         }
-        return new Lexer(w.toCharArray());
+        return new Lexer(w.toCharArray(), features);
+    }
+
+    @Override
+    public Set<JavaFeature> getFeatures() {
+        return EnumSet.copyOf(this.features);
     }
 
     // keyword/var/type name etc.
@@ -434,6 +443,10 @@ public class Lexer extends UnicodeTranslator implements Tokenizer {
                 // either create the first token pos or override the current one, might happen for incomplete tokens i.e. a/b (ID, start of (doc)comment, ID)
             }
             char c = this.peek();
+            if (tokenPos == null || tokenPos.isInProgress()) {
+                tokenPos = snapshot.record(this);
+                // either create the first token pos or override the current one, might happen for incomplete tokens i.e. a/b (ID, start of (doc)comment, ID)
+            }
             switch (c) {
                 case ' ':
                 case '\t':
@@ -453,7 +466,7 @@ public class Lexer extends UnicodeTranslator implements Tokenizer {
                     tokenPos.begin();
                     this.incrCursor();
                     if (match('/')) {
-                        if (this.checkMarkdownDocComments && match('/')) {
+                        if (this.features.contains(JavaFeature.MARKDOWN_DOC_COMMENTS) && match('/')) {
                             type = TokenType.MARKDOWN_JAVADOC;
                             this.readMarkdownJavadoc(tokenPos);
                         } else {

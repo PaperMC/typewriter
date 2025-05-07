@@ -1,6 +1,5 @@
 package io.papermc.typewriter.context;
 
-import io.papermc.typewriter.ClassNamed;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.Collections;
@@ -40,31 +39,6 @@ public class ImportNameMap {
     @SuppressWarnings("unchecked")
     public <T extends ImportName> Set<T> get(ImportCategory<T> category) {
         return (Set<T>) this.names.getOrDefault(category, Collections.emptySet());
-    }
-
-    public boolean canImportSafely(ClassNamed type) {
-        for (ImportName.Type name : this.get(ImportCategory.TYPE)) {
-            if (name.isGlobal()) {
-                continue;
-            }
-
-            if (type.simpleName().equals(name.id())) {
-                return false;
-            }
-        }
-
-        // while this is not always required it ensure clarity of the source file
-        for (ImportName.Static name : this.get(ImportCategory.STATIC)) {
-            if (name.isGlobal()) {
-                continue;
-            }
-
-            if (type.simpleName().equals(name.id())) {
-                return false;
-            }
-        }
-
-        return true;
     }
 
     public <T extends ImportName.Identified> ImportSet asSet(ImportCategory<T> category) {

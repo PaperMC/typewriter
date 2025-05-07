@@ -60,7 +60,7 @@ public class ShortNameTest extends ParserTest {
                              Class<?> sampleClass,
                              @ConvertWith(ShortNameMappingConverter.class) ShortNameMapping mapping) throws IOException {
         String name = sampleClass.getSimpleName();
-        final ImportNameCollector importCollector = new ImportNameCollector(new ClassNamed(sampleClass), ClassResolver.atRuntime());
+        final ImportNameCollector importCollector = new ImportNameCollector(ClassNamed.of(sampleClass), ClassResolver.atRuntime());
         collectImportsFrom(path, importCollector);
 
         assertFalse(mapping.getShortNames() == null && mapping.getMemberShortNames() == null, "Empty expected import mapping!");
@@ -108,11 +108,11 @@ public class ShortNameTest extends ParserTest {
                                   @ConvertWith(ShortNameMappingConverter.class) ShortNameMapping mapping) {
         assertNotNull(mapping.getShortNames(), "Empty name mapping!");
 
-        ClassNamed from = new ClassNamed(sampleClass);
+        ClassNamed from = ClassNamed.of(sampleClass);
         for (Map.Entry<String, String> expect : mapping.getShortNames().entrySet()) {
             String typeName = expect.getKey();
             Class<?> runtimeClass = assertDoesNotThrow(() -> Class.forName(typeName), "Runtime class is unknown for " + typeName);
-            assertEquals(expect.getValue(), from.relativize(new ClassNamed(runtimeClass)),
+            assertEquals(expect.getValue(), from.relativize(ClassNamed.of(runtimeClass)),
                 "Shortest access name of " + typeName + " doesn't match with the expected name from " + from.canonicalName() + " !");
         }
     }

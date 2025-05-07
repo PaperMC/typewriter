@@ -1,6 +1,5 @@
 package io.papermc.typewriter.util;
 
-import io.papermc.typewriter.ClassNamed;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -51,7 +50,7 @@ public class ClassResolver {
         this.loader = loader;
     }
 
-    public Optional<Class<?>> tryFind(String name) {
+    public Optional<Class<?>> find(String name) {
         try {
             return Optional.of(this.loader.loadClass(name));
         } catch (ClassNotFoundException ignored) {
@@ -59,27 +58,7 @@ public class ClassResolver {
         return Optional.empty();
     }
 
-    public ClassNamed find(String name) {
-        return this.tryFind(name).map(ClassNamed::new).orElseThrow();
-    }
-
-    public ClassNamed resolve(ClassNamed unresolved) {
-        if (unresolved.knownClass() != null) {
-            return unresolved;
-        }
-
-        return this.tryFind(unresolved.binaryName()).map(ClassNamed::new).orElse(unresolved);
-    }
-
-    public ClassNamed resolveOrThrow(ClassNamed unresolved) {
-        if (unresolved.knownClass() != null) {
-            return unresolved;
-        }
-
-        return this.tryFind(unresolved.binaryName()).map(ClassNamed::new).orElseThrow();
-    }
-
-    public Optional<ModuleReference> tryFindModule(String name) {
+    public Optional<ModuleReference> findModule(String name) {
         if (this.finderFactory == null) {
             return Optional.empty();
         }

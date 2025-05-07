@@ -10,6 +10,7 @@ import io.papermc.typewriter.SourceRewriter;
 import io.papermc.typewriter.context.ImportCollector;
 import io.papermc.typewriter.context.ImportNameCollector;
 import io.papermc.typewriter.parser.ImportParser;
+import io.papermc.typewriter.parser.JavaFeature;
 import io.papermc.typewriter.parser.Lexer;
 import io.papermc.typewriter.parser.StringReader;
 import io.papermc.typewriter.parser.exception.ReaderException;
@@ -51,14 +52,12 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
         if (Files.isRegularFile(path)) {
             final Lexer lex;
             try (BufferedReader buffer = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
-                lex = Lexer.fromReader(buffer);
-                lex.checkMarkdownDocComments = !sourcesMetadata.canSkipMarkdownDocComments();
+                lex = Lexer.fromReader(buffer, sourcesMetadata.getFeatures());
             } catch (ReaderException ex) {
                 throw ex.withAdditionalContext(file);
             }
 
-            final boolean includeModule = true /* todo sourcesMetadata.javaVersion() >= 25 */;
-            ImportNameCollector collector = collectImport(file, includeModule, resolver, lex);
+            ImportNameCollector collector = collectImport(file, resolver, lex);
             this.setup(file, sourcesMetadata, resolver, view, collector);
 
             try (LineNumberReader reader = new LineNumberReader(new CharArrayReader(lex.toCharArray()))) {
@@ -67,7 +66,7 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
 
             if (collector.isModified()) { // if added entries
                 // rewrite the imports
-                this.rewriteImports(collector, includeModule, file.metadata().flatMap(FileMetadata::header).orElseGet(() -> sourcesMetadata.importLayout().getRelevantHeader(path, ImportHeader.DEFAULT)), content);
+                this.rewriteImports(collector, lex.getFeatures(), file.metadata().flatMap(FileMetadata::header).orElseGet(() -> sourcesMetadata.importLayout().getRelevantHeader(path, ImportHeader.DEFAULT)), content);
             }
             destinationPath = path;
         } else {
@@ -112,9 +111,9 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
         }
     }
 
-    private ImportNameCollector collectImport(SourceFile source, boolean includeModule, ClassResolver resolver, Lexer lexer) {
+    private ImportNameCollector collectImport(SourceFile source, ClassResolver resolver, Lexer lexer) {
         final ImportNameCollector importCollector = new ImportNameCollector(source.mainClass(), resolver);
-        ImportParser.collectImports(lexer, importCollector, includeModule, source);
+        ImportParser.collectImports(lexer, importCollector, source);
         return importCollector;
     }
 
@@ -211,9 +210,9 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
         }
     }
 
-    private void rewriteImports(ImportNameCollector collector, boolean includeModule, ImportHeader header, StringBuilder into) {
-        Lexer lex = new Lexer(into.toString().toCharArray());
-        TokenCapture position = ImportParser.trackImportPosition(lex, includeModule); // need to retrack this just in case other rewriters moved things around
+    private void rewriteImports(ImportNameCollector collector, Set<JavaFeature> features, ImportHeader header, StringBuilder into) {
+        Lexer lex = new Lexer(into.toString().toCharArray(), features);
+        TokenCapture position = ImportParser.trackImportPosition(lex); // need to retrack this just in case other rewriters moved things around
         into.replace(position.start().cursor(), position.end().cursor(), collector.writeImports(header));
     }
 

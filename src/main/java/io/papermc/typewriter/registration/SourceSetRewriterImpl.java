@@ -5,6 +5,8 @@ import io.papermc.typewriter.SourceFile;
 import io.papermc.typewriter.SourceRewriter;
 import io.papermc.typewriter.util.ClassNamedView;
 import io.papermc.typewriter.util.ClassResolver;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.framework.qual.DefaultQualifier;
 
 import java.io.IOException;
 import java.lang.module.ModuleReference;
@@ -15,6 +17,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+@DefaultQualifier(NonNull.class)
 public class SourceSetRewriterImpl<T extends SourceSetRewriter<T>> implements SourceSetRewriter<T> {
 
     protected final Map<SourceFile, SourceRewriter> rewrites = new LinkedHashMap<>();
@@ -62,12 +65,12 @@ public class SourceSetRewriterImpl<T extends SourceSetRewriter<T>> implements So
         }
 
         @Override
-        public Optional<Class<?>> tryFind(String name) {
+        public Optional<Class<?>> find(String name) {
             return Optional.empty();
         }
 
         @Override
-        public Optional<ModuleReference> tryFindModule(String name) {
+        public Optional<ModuleReference> findModule(String name) {
             return Optional.empty();
         }
     }

@@ -9,23 +9,23 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.framework.qual.DefaultQualifier;
 import org.jetbrains.annotations.Contract;
+import org.jetbrains.annotations.NotNull;
 
-import java.util.NoSuchElementException;
 import java.util.Objects;
 
 @DefaultQualifier(NonNull.class)
-public record ClassNamed(String packageName, String simpleName, String dottedNestedName, @Nullable Class<?> knownClass) {
+public record ClassNamed(String packageName, String simpleName, String dottedNestedName, @Nullable Class<?> reference) {
 
-    public ClassNamed(Class<?> knownClass) {
-        this(knownClass.getPackageName(), knownClass.getSimpleName(), ClassHelper.retrieveFullNestedName(knownClass), knownClass);
+    private ClassNamed(Class<?> reference) {
+        this(reference.getPackageName(), reference.getSimpleName(), ClassHelper.retrieveFullNestedName(reference), reference);
     }
 
     public ClassNamed {
         Preconditions.checkArgument(packageName.isEmpty() || SourceVersion.isName(packageName), "Package name '%s' contains syntax errors", packageName);
         Preconditions.checkArgument(SourceVersion.isName(dottedNestedName), "Class name '%s' contains syntax errors", dottedNestedName);
-        if (knownClass != null) {
-            Preconditions.checkArgument(!knownClass.isPrimitive(), "Invalid class, primitive types and 'void' type are not allowed");
-            Preconditions.checkArgument(!knownClass.isAnonymousClass() && !knownClass.isHidden() && !knownClass.isSynthetic() && !knownClass.isArray(), "Invalid class, only single named class are allowed");
+        if (reference != null) {
+            Preconditions.checkArgument(!reference.isPrimitive(), "Invalid class, primitive types and 'void' type are not allowed");
+            Preconditions.checkArgument(!reference.isAnonymousClass() && !reference.isHidden() && !reference.isSynthetic() && !reference.isArray(), "Invalid class, only single named class are allowed");
         }
     }
 
@@ -76,21 +76,41 @@ public record ClassNamed(String packageName, String simpleName, String dottedNes
         return new ClassNamed(packageName, simpleName, nestedName, null);
     }
 
-    public ClassNamed resolve(ClassResolver resolver) {
-        try {
-            return resolver.resolveOrThrow(this);
-        } catch (NoSuchElementException ex) {
-            throw new RuntimeException("Cannot resolve class " + this, ex);
+    private static final ClassValue<ClassNamed> CACHE = new ClassValue<>() {
+        @Override
+        protected ClassNamed computeValue(@NotNull Class<?> klass) {
+            return new ClassNamed(klass);
         }
+    };
+
+    /**
+     * Creates a class named object.
+     *
+     * @param reference the reference class
+     * @return the new object
+     */
+    @Contract(value = "_ -> new", pure = true)
+    public static ClassNamed of(Class<?> reference) {
+        return CACHE.get(reference);
+    }
+
+    public ClassNamed resolve(ClassResolver resolver) {
+        if (this.reference != null) {
+            return this;
+        }
+
+        return resolver.find(this.binaryName())
+            .map(ClassNamed::of)
+            .orElseThrow(() -> new IllegalArgumentException("Cannot resolve class " + this));
     }
 
     public ClassNamed topLevel() {
-        if (this.knownClass != null) {
-            Class<?> topLevelClass = ClassHelper.getTopLevelClass(this.knownClass);
-            if (topLevelClass == this.knownClass) {
+        if (this.reference != null) {
+            Class<?> topLevelClass = ClassHelper.getTopLevelClass(this.reference);
+            if (topLevelClass == this.reference) {
                 return this;
             }
-            return new ClassNamed(topLevelClass);
+            return ClassNamed.of(topLevelClass);
         }
 
         int dotIndex = this.dottedNestedName.indexOf('.');
@@ -106,12 +126,12 @@ public record ClassNamed(String packageName, String simpleName, String dottedNes
     }
 
     public @Nullable ClassNamed enclosing() {
-        if (this.knownClass != null) {
-            Class<?> parentClass = this.knownClass.getEnclosingClass();
+        if (this.reference != null) {
+            Class<?> parentClass = this.reference.getEnclosingClass();
             if (parentClass == null) {
                 return null;
             }
-            return new ClassNamed(parentClass);
+            return ClassNamed.of(parentClass);
         }
 
         int dotIndex = this.dottedNestedName.lastIndexOf('.');
@@ -128,6 +148,18 @@ public record ClassNamed(String packageName, String simpleName, String dottedNes
             return new ClassNamed(this.packageName, simpleName, name, null);
         }
         return null;
+    }
+
+    public ClassNamed nested(String name) {
+        if (this.reference != null) {
+            try {
+                Class<?> innerReference = Class.forName(this.reference.getName() + '$' + name);
+                return ClassNamed.of(innerReference);
+            } catch (ClassNotFoundException ignored) {
+            }
+        }
+
+        return new ClassNamed(this.packageName, name, this.dottedNestedName + '.' + name, null);
     }
 
     public String relativize(ClassNamed otherType) {
@@ -156,8 +188,8 @@ public record ClassNamed(String packageName, String simpleName, String dottedNes
     }
 
     public String binaryName() {
-        if (this.knownClass != null) {
-            return this.knownClass.getName();
+        if (this.reference != null) {
+            return this.reference.getName();
         }
 
         if (this.packageName.isEmpty()) {
@@ -168,8 +200,8 @@ public record ClassNamed(String packageName, String simpleName, String dottedNes
     }
 
     public String canonicalName() {
-        if (this.knownClass != null) {
-            return this.knownClass.getCanonicalName();
+        if (this.reference != null) {
+            return this.reference.getCanonicalName();
         }
 
         if (this.packageName.isEmpty()) {
@@ -194,8 +226,8 @@ public record ClassNamed(String packageName, String simpleName, String dottedNes
         }
 
         ClassNamed other = (ClassNamed) o;
-        if (this.knownClass != null && other.knownClass != null) {
-            return this.knownClass == other.knownClass;
+        if (this.reference != null && other.reference != null) {
+            return this.reference == other.reference;
         }
         return this.packageName.equals(other.packageName) &&
             this.dottedNestedName.equals(other.dottedNestedName);
