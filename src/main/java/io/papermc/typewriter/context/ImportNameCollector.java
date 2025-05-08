@@ -5,6 +5,7 @@ import com.google.common.base.Suppliers;
 import io.papermc.typewriter.ClassNamed;
 import io.papermc.typewriter.context.layout.ImportHeader;
 import io.papermc.typewriter.context.layout.ImportScheme;
+import io.papermc.typewriter.parser.Keywords;
 import io.papermc.typewriter.parser.name.ProtoImportName;
 import io.papermc.typewriter.util.ClassHelper;
 import io.papermc.typewriter.util.ClassResolver;
@@ -212,7 +213,8 @@ public class ImportNameCollector implements ImportCollector {
     }
 
     private void printImportStatement(StringBuilder builder, ImportName type) {
-        builder.append("import ");
+        builder.append(Keywords.IMPORT);
+        builder.append(" ");
         type.category().identity().ifPresent(name -> {
             builder.append(name).append(' ');
         });

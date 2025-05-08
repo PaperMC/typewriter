@@ -9,9 +9,7 @@ import java.util.function.Predicate;
 public class PackageFilter implements Predicate<ImportName> {
 
     public static final PackageFilter TYPE = only(ImportCategory.TYPE);
-
     public static final PackageFilter STATIC = only(ImportCategory.STATIC);
-
     @ApiStatus.Experimental
     public static final PackageFilter MODULE = only(ImportCategory.MODULE);
 

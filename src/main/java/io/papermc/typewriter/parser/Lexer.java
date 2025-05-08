@@ -601,9 +601,6 @@ public class Lexer extends UnicodeTranslator implements Tokenizer {
 
         if (CharSequenceToken.TYPES.contains(type)) {
             String value = this.readBuffer();
-            if (type == TokenType.IDENTIFIER) {
-                type = TokenType.fromValue(value, type);
-            }
 
             TokenCapture record = tokenPos.fetch();
             AbsolutePos startPos = record.start();

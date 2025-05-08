@@ -1,7 +1,6 @@
 package io.papermc.typewriter;
 
 import com.google.common.base.Preconditions;
-import io.papermc.typewriter.parser.name.ProtoImportName;
 import io.papermc.typewriter.util.ClassHelper;
 import io.papermc.typewriter.util.ClassResolver;
 import javax.lang.model.SourceVersion;
@@ -180,7 +179,7 @@ public record ClassNamed(String packageName, String simpleName, String dottedNes
             return otherType.simpleName();
         }
 
-        if (otherType.dottedNestedName().charAt(startOffset) == ProtoImportName.IDENTIFIER_SEPARATOR) {
+        if (otherType.dottedNestedName().charAt(startOffset) == '.') {
             startOffset++;
         }
 

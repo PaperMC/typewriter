@@ -9,6 +9,7 @@ import imports.StandardImportType;
 import imports.UnicodeImportType;
 import io.papermc.typewriter.ClassNamed;
 import io.papermc.typewriter.context.ImportCategory;
+import io.papermc.typewriter.context.ImportName;
 import io.papermc.typewriter.context.ImportSet;
 import io.papermc.typewriter.context.ImportNameCollector;
 import io.papermc.typewriter.util.ClassResolver;
@@ -21,6 +22,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -66,6 +69,10 @@ public class ImportCollectTest extends ParserTest {
         ImportSet expectedStaticImports = expected.getStaticImports();
         assertEquals(expectedStaticImports.single(), staticImports.single(), "Static imports doesn't match for " + name);
         assertEquals(expectedStaticImports.global(), staticImports.global(), "Static global imports doesn't match for " + name);
+
+        Set<String> moduleImports = importCollector.getImportMap().get(ImportCategory.MODULE).stream().map(ImportName.Module::name).collect(Collectors.toSet());
+        Set<String> expectedModuleImports = expected.getModuleImports();
+        assertEquals(expectedModuleImports, moduleImports, "Module imports doesn't match for " + name);
     }
 
     private static class ImportMappingConverter extends YamlMappingConverter<ImportMapping> {

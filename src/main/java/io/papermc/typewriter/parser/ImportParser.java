@@ -16,6 +16,8 @@ import io.papermc.typewriter.parser.token.TokenType;
 
 import java.util.EnumSet;
 import java.util.Set;
+import java.util.function.BiPredicate;
+import java.util.function.Predicate;
 
 public final class ImportParser {
 
@@ -28,32 +30,15 @@ public final class ImportParser {
 
     public static void collectImports(Tokenizer tokenizer, ImportCollector collector, SourceFile source) {
         SequenceTokens.wrap(tokenizer, FORMAT_TOKENS)
-            .skip(TokenType.PACKAGE, action -> { // package <qualified name>;
+            .skipIdentifier(Predicate.isEqual(Keywords.PACKAGE), action -> { // package <qualified name>;
                 action.skipQualifiedName().skip(TokenType.SECO);
             }, TokenTaskBuilder::asOptional) // for default package
-            .skip(TokenType.IMPORT, action -> {
+            .skipIdentifier(Predicate.isEqual(Keywords.IMPORT), action -> {
                 ProtoImportName protoName = new ProtoImportName();
                 action
-                    .map(TokenType.STATIC, $ -> protoName.asCategory(ImportCategory.STATIC))
+                    .mapIdentifier(Predicate.isEqual(Keywords.STATIC), $ -> protoName.asCategory(ImportCategory.STATIC))
                     .or(subAction -> {
-                        subAction.map((token, reader) -> {
-                            if (!tokenizer.getFeatures().contains(JavaFeature.MODULE_IMPORT)) {
-                                return false;
-                            }
-
-                            if (token.type() == TokenType.IDENTIFIER && ((CharSequenceToken) token).value().equals(ImportCategory.MODULE.identity().orElseThrow())) {
-                                PrintableToken nextToken = reader.next();
-                                if (nextToken != null && nextToken.type() == TokenType.IDENTIFIER) {
-                                    return true;
-                                } else {
-                                    // module is a contextual keyword meaning it can be used as a regular identifier elsewhere
-                                    // if the qualified name starts with "module" it should *not* be considered as a module import
-                                    // import module A; <-/-> import module.A;
-                                    reader.reset();
-                                }
-                            }
-                            return false;
-                        }, token -> protoName.asCategory(ImportCategory.MODULE), TokenTaskBuilder::asOptional);
+                        subAction.map(isModuleImport(tokenizer), token -> protoName.asCategory(ImportCategory.MODULE), TokenTaskBuilder::asOptional);
                     })
                     .mapQualifiedName(
                         name -> protoName.append(name.value()),
@@ -76,32 +61,13 @@ public final class ImportParser {
     public static TokenCapture trackImportPosition(Tokenizer tokenizer) {
         TokenRecorder.Default<PrintableToken> tokenPos = TokenRecorder.BETWEEN_TOKEN.record();
         SequenceTokens.wrap(tokenizer, FORMAT_TOKENS)
-            .skip(TokenType.PACKAGE, action -> { // package <qualified name>;
+            .skipIdentifier(Predicate.isEqual(Keywords.PACKAGE), action -> { // package <qualified name>;
                 action.skipQualifiedName().skip(TokenType.SECO);
             }, TokenTaskBuilder::asOptional) // for default package
-            .skip(TokenType.IMPORT, action -> {
+            .skipIdentifier(Predicate.isEqual(Keywords.IMPORT), action -> {
                 action
-                    .skip(TokenType.STATIC)
-                    .or(subAction -> {
-                        subAction.skip((token, reader) -> {
-                            if (!tokenizer.getFeatures().contains(JavaFeature.MODULE_IMPORT)) {
-                                return false;
-                            }
-
-                            if (token.type() == TokenType.IDENTIFIER && ((CharSequenceToken) token).value().equals(ImportCategory.MODULE.identity().orElseThrow())) {
-                                PrintableToken nextToken = reader.next();
-                                if (nextToken != null && nextToken.type() == TokenType.IDENTIFIER) {
-                                    return true;
-                                } else {
-                                    // module is a contextual keyword meaning it can be used as a regular identifier elsewhere
-                                    // if the qualified name starts with "module" it should *not* be considered as a module import
-                                    // import module A; <-/-> import module.A;
-                                    reader.reset();
-                                }
-                            }
-                            return false;
-                        }, TokenTaskBuilder::asOptional);
-                    })
+                    .skipIdentifier(Predicate.isEqual(Keywords.STATIC))
+                    .or(subAction -> subAction.skip(isModuleImport(tokenizer), TokenTaskBuilder::asOptional))
                     .skipQualifiedName((SequenceTokens partialAction) -> partialAction.skip(TokenType.STAR))
                     .map(TokenType.SECO, tokenPos::end);
                 },
@@ -111,6 +77,26 @@ public final class ImportParser {
             )
             .executeOrThrow((failedTask, token) -> failedTask.createFailure("Wrong token found while tracking import section position", token));
         return tokenPos.fetch();
+    }
+
+    private static BiPredicate<PrintableToken, SequenceTokens.LookAheadReader> isModuleImport(Tokenizer tokenizer) {
+        return (token, reader) -> {
+            if (!tokenizer.getFeatures().contains(JavaFeature.MODULE_IMPORT)) {
+                return false;
+            }
+
+            if (token.type() == TokenType.IDENTIFIER && ((CharSequenceToken) token).value().equals(Keywords.MODULE)) {
+                PrintableToken nextToken = reader.next();
+                if (nextToken != null && nextToken.type() == TokenType.IDENTIFIER) {
+                    return true;
+                } else {
+                    // module is a contextual keyword meaning it can be used as a regular identifier elsewhere
+                    // if the qualified name starts with "module" it should *not* be considered as a module import
+                    // import module A; <-/-> import module.A;
+                }
+            }
+            return false;
+        };
     }
 
     private ImportParser() {

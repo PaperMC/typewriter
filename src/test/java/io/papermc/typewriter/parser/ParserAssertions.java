@@ -4,8 +4,6 @@ import io.papermc.typewriter.parser.token.CharSequenceToken;
 import io.papermc.typewriter.parser.token.Token;
 import io.papermc.typewriter.parser.token.TokenType;
 
-import java.util.Objects;
-
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 public final class ParserAssertions {
@@ -30,10 +28,6 @@ public final class ParserAssertions {
             Token token = accessor.nextToken();
             assertSame(type, token.type());
         }
-    }
-
-    public static void assertKeyword(CharSequenceToken token, int offset, TokenType type) {
-        assertIdentifier(token, offset, type, Objects.requireNonNull(token.type().value));
     }
 
     public static void assertIdentifier(CharSequenceToken token, int offset, String expectedValue) {

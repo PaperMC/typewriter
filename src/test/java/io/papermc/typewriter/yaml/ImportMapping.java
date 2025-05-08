@@ -7,6 +7,7 @@ public class ImportMapping {
 
     public ImportSet imports;
     public ImportSet staticImports;
+    public Set<String> moduleImports;
 
     public ImportSet getImports() {
         return this.imports;
@@ -14,6 +15,10 @@ public class ImportMapping {
 
     public ImportSet getStaticImports() {
         return this.staticImports;
+    }
+
+    public Set<String> getModuleImports() {
+        return this.moduleImports == null ? Collections.emptySet() : this.moduleImports;
     }
 
     public static class ImportSet implements io.papermc.typewriter.context.ImportSet {

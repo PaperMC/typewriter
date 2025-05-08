@@ -5,6 +5,7 @@ import java.util.random.RandomGenerator.JumpableGenerator; // inner class import
 import java.util.*; // star import (whole package + one level)
 import static javax.lang.model.SourceVersion.RELEASE_21; // static import
 import static javax.lang.model.SourceVersion.*; // static star import
+import module java.base; // module import
 
 public class StandardImportType {
 

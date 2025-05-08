@@ -6,7 +6,6 @@ import io.papermc.typewriter.parser.sequence.hook.HookManager;
 import io.papermc.typewriter.parser.sequence.hook.HookType;
 import io.papermc.typewriter.parser.sequence.hook.Hooks;
 import io.papermc.typewriter.parser.token.PrintableToken;
-import io.papermc.typewriter.parser.token.Token;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import java.util.function.Consumer;
@@ -38,21 +37,21 @@ public class TokenTask implements TokenTaskThrowable {
         return this.lastInput != null;
     }
 
-    boolean run(Token token, SequenceTokens executor) {
+    boolean run(PrintableToken token, SequenceTokens executor) {
         boolean alreadyRan = alreadyRan();
         if (isRepeatable() && !alreadyRan) {
-            runHook(HookType.FIRST, hook -> hook.pre().call(token));
+            runHook(HookType.FIRST, hook -> hook.pre().accept(token));
         }
 
-        runHook(HookType.EVERY, hook -> hook.pre().call(token));
+        runHook(HookType.EVERY, hook -> hook.pre().accept(token));
         boolean success = this.action.execute(token, executor);
-        runHook(HookType.EVERY, hook -> hook.post().call(token));
+        runHook(HookType.EVERY, hook -> hook.post().accept(token));
 
-        if (isRepeatable() && (success ? (alreadyRan && !executor.iterator().hasNext()) : (alreadyRan || isOptional()))) { // based in SequenceTokens#execute poll
-            runHook(HookType.LAST, hook -> hook.post().call(token));
+        if (isRepeatable() && (success ? (alreadyRan && !executor.iterator().hasNext()) : (alreadyRan || isOptional()))) { // based on SequenceTokens#execute poll
+            runHook(HookType.LAST, hook -> hook.post().accept(token));
         }
 
-        this.lastInput = (PrintableToken) token;
+        this.lastInput = token;
         return success;
     }
 

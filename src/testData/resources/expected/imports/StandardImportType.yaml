@@ -10,3 +10,6 @@ staticImports:
     - "javax.lang.model.SourceVersion.RELEASE_21"
   global:
     - "javax.lang.model.SourceVersion.*"
+
+moduleImports:
+  - "java.base"
