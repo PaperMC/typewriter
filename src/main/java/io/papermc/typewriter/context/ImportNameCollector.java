@@ -18,6 +18,7 @@ import java.lang.module.ModuleReference;
 import java.lang.reflect.Modifier;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -247,15 +248,17 @@ public class ImportNameCollector implements ImportCollector {
         }
 
         if (!remainingImports.isEmpty()) {
-            builder.deleteCharAt(builder.length() - 1);
-
-            LOGGER.error("Some imports have been skipped since the import layout is not defined for them!");
-            remainingImports.forEach(name -> {
-                StringBuilder log = new StringBuilder();
-                log.append("- ");
-                printImportStatement(log, name);
-                LOGGER.error(log.toString());
-            });
+            LOGGER.warn("Some imports don't have a defined import layout: {}", remainingImports);
+            builder.append('\n');
+            Iterator<ImportName> types = remainingImports.iterator();
+            while (types.hasNext()) {
+                ImportName type = types.next();
+                types.remove();
+                this.printImportStatement(builder, type);
+                if (types.hasNext()) {
+                    builder.append('\n');
+                }
+            }
         }
 
         return builder.toString();
