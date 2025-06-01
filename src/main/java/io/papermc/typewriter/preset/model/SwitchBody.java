@@ -14,73 +14,73 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-public class SwitchContent implements CodeEmitter {
+public class SwitchBody implements CodeEmitter {
 
     private List<SwitchCases> cases = new ArrayList<>();
     private @Nullable SwitchCases defaultCase;
 
-    private SwitchContent(Collection<SwitchCases> branches) {
+    private SwitchBody(Collection<SwitchCases> branches) {
         this.then(branches);
     }
 
     @Contract(value = "_ -> new", pure = true)
-    public static SwitchContent of(SwitchCases... branches) {
+    public static SwitchBody of(SwitchCases... branches) {
         return of(Arrays.asList(branches));
     }
 
     @Contract(value = "_ -> new", pure = true)
-    public static SwitchContent of(Collection<SwitchCases> branches) {
-        return new SwitchContent(branches);
+    public static SwitchBody of(Collection<SwitchCases> branches) {
+        return new SwitchBody(branches);
     }
 
     @Contract(value = "_ -> this", mutates = "this")
-    public SwitchContent then(SwitchCases... branches) {
+    public SwitchBody then(SwitchCases... branches) {
         return then(Arrays.asList(branches));
     }
 
     @Contract(value = "_ -> this", mutates = "this")
-    public SwitchContent then(Collection<SwitchCases> branches) {
+    public SwitchBody then(Collection<SwitchCases> branches) {
         Preconditions.checkArgument(branches.stream().noneMatch(SwitchCases::isDefault), "These switch cases cannot contains default one!");
         this.cases.addAll(branches);
         return this;
     }
 
     @Contract(value = "_ -> this", mutates = "this")
-    public SwitchContent withDefault(SwitchCases defaultCase) {
+    public SwitchBody withDefault(SwitchCases defaultCase) {
         Preconditions.checkArgument(defaultCase.isDefault(), "This switch case is not a default one!");
         this.defaultCase = defaultCase;
         return this;
     }
 
     @Contract(value = "_ -> this", mutates = "this")
-    public SwitchContent withDefault(CodeBlock content) {
-        return withDefault(SwitchCases.ofDefault(content, false));
+    public SwitchBody withDefault(CodeBlock body) {
+        return withDefault(SwitchCases.ofDefault(body, false));
     }
 
     public void mergeSimilarBranches(Comparator<String> keySort) {
         List<SwitchCases> cases = new ArrayList<>();
 
         List<SwitchCases> nonDefaultCases = new ArrayList<>();
-        Map<CodeBlock, SwitchCases.SwitchCasesChain> handleObjects = new HashMap<>();
-        @Nullable CodeBlock defaultValue = this.defaultCase == null ? null : this.defaultCase.content();
+        Map<CodeBlock, SwitchCases.SwitchCasesChain> stats = new HashMap<>();
+        @Nullable CodeBlock defaultValue = this.defaultCase == null ? null : this.defaultCase.body();
 
         // merge similar cases, and omit cases similar to the default
         for (SwitchCases branch : this.cases) {
-            CodeBlock content = branch.content();
+            CodeBlock body = branch.body();
 
-            if (defaultValue == null || !Objects.equals(branch.content(), defaultValue)) {
+            if (defaultValue == null || !Objects.equals(branch.body(), defaultValue)) {
                 nonDefaultCases.add(branch);
 
                 final SwitchCases.SwitchCasesChain newCases;
-                if (handleObjects.containsKey(content)) {
-                    newCases = handleObjects.get(content);
+                if (stats.containsKey(body)) {
+                    newCases = stats.get(body);
                 } else {
                     newCases = SwitchCases.chain();
-                    newCases.sortValues(keySort);
+                    newCases.sortLabels(keySort);
                 }
-                newCases.addAll(Objects.requireNonNull(branch.values()));
+                newCases.addAll(Objects.requireNonNull(branch.labels()));
 
-                handleObjects.put(content, newCases);
+                stats.put(body, newCases);
             }
         }
 
@@ -98,13 +98,13 @@ public class SwitchContent implements CodeEmitter {
         }
 
         // complete builders with collected infos
-        for (Map.Entry<CodeBlock, SwitchCases.SwitchCasesChain> entry : handleObjects.entrySet()) {
-            SwitchCases.SwitchCasesChain branch = entry.getValue();
+        for (Map.Entry<CodeBlock, SwitchCases.SwitchCasesChain> stat : stats.entrySet()) {
+            SwitchCases.SwitchCasesChain branch = stat.getValue();
 
             if (inlined) {
                 branch.inlined(arrow);
             }
-            cases.add(branch.enclosingContent(entry.getKey()).build());
+            cases.add(branch.body(stat.getKey()).build());
         }
         this.cases = cases;
     }

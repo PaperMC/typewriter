@@ -1,7 +1,7 @@
 package io.papermc.typewriter.preset;
 
 import com.google.common.base.Preconditions;
-import io.papermc.typewriter.preset.model.EnumValue;
+import io.papermc.typewriter.preset.model.EnumConstant;
 import io.papermc.typewriter.replace.SearchMetadata;
 import io.papermc.typewriter.replace.SearchReplaceRewriter;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
@@ -24,10 +24,15 @@ public abstract class EnumRewriter<T> extends SearchReplaceRewriter {
 
     protected abstract Iterable<T> getValues();
 
-    protected abstract EnumValue.Builder rewriteEnumValue(T item);
+    protected abstract EnumConstant.Builder constantPrototype(T value);
 
-    protected void appendEnumValue(T item, StringBuilder builder, String indent, boolean reachEnd) {
-        this.rewriteEnumValue(item).build().emitCode(indent, this.indentUnit(), builder);
+    protected void rewriteConstant(EnumConstant.Builder builder, T value) {
+    }
+
+    protected void appendConstant(T value, StringBuilder builder, String indent, boolean reachEnd) {
+        EnumConstant.Builder prototype = this.constantPrototype(value);
+        this.rewriteConstant(prototype, value);
+        prototype.build().emitCode(indent, this.indentUnit(), builder);
         if (reachEnd && !this.values.hasNext()) {
             builder.append(';');
         } else {
@@ -51,7 +56,7 @@ public abstract class EnumRewriter<T> extends SearchReplaceRewriter {
     protected void replaceLine(SearchMetadata metadata, StringBuilder builder) {
         this.populateValues();
         Preconditions.checkState(this.values.hasNext(), "Enum size doesn't match between generated values and replaced values.");
-        appendEnumValue(this.values.next(), builder, metadata.indent(), this.canReachEnd(metadata));
+        appendConstant(this.values.next(), builder, metadata.indent(), this.canReachEnd(metadata));
     }
 
     @Override
@@ -60,7 +65,7 @@ public abstract class EnumRewriter<T> extends SearchReplaceRewriter {
         boolean reachEnd = this.canReachEnd(metadata);
 
         while (this.values.hasNext()) {
-            appendEnumValue(this.values.next(), builder, metadata.indent(), reachEnd);
+            appendConstant(this.values.next(), builder, metadata.indent(), reachEnd);
         }
     }
 }

@@ -1,6 +1,6 @@
 package io.papermc.typewriter.preset;
 
-import io.papermc.typewriter.preset.model.EnumValue;
+import io.papermc.typewriter.preset.model.EnumConstant;
 
 import java.util.EnumSet;
 
@@ -19,7 +19,7 @@ public class EnumCloneRewriter<T extends Enum<T>> extends EnumRewriter<T> { // n
     }
 
     @Override
-    protected EnumValue.Builder rewriteEnumValue(final T item) {
-        return EnumValue.builder(item.name());
+    protected EnumConstant.Builder constantPrototype(T value) {
+        return EnumConstant.builder(value.name());
     }
 }

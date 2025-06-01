@@ -15,23 +15,23 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public record SwitchCases(@Nullable List<String> values, CodeBlock content, boolean inlined, boolean arrow) implements CodeEmitter {
+public record SwitchCases(@Nullable List<String> labels, CodeBlock body, boolean inlined, boolean arrow) implements CodeEmitter {
 
-    public SwitchCases(@Nullable List<String> values, CodeBlock content, boolean inlined, boolean arrow) {
-        if (values == null) {
+    public SwitchCases(@Nullable List<String> labels, CodeBlock body, boolean inlined, boolean arrow) {
+        if (labels == null) {
             Preconditions.checkArgument(inlined, "Default case must be inlined");
         } else {
-            Preconditions.checkArgument(!values.isEmpty(), "Values cannot be empty in a regular case!");
+            Preconditions.checkArgument(!labels.isEmpty(), "Labels cannot be empty in a regular case!");
         }
 
-        this.values = values == null ? null : List.copyOf(values);
-        this.content = content;
+        this.labels = labels == null ? null : List.copyOf(labels);
+        this.body = body;
         this.inlined = inlined;
         this.arrow = arrow;
     }
 
     public boolean isDefault() {
-        return this.values == null;
+        return this.labels == null;
     }
 
     @Contract(value = "-> new", pure = true)
@@ -40,38 +40,39 @@ public record SwitchCases(@Nullable List<String> values, CodeBlock content, bool
     }
 
     @Contract(value = "_, _ -> new", pure = true)
-    public static SwitchCases of(String value, CodeBlock content) {
-        return new SwitchCases(Collections.singletonList(value), content, false, false);
+    public static SwitchCases of(String label, CodeBlock body) {
+        return new SwitchCases(Collections.singletonList(label), body, false, false);
     }
 
     @Contract(value = "_, _, _ -> new", pure = true)
-    public static SwitchCases inlined(String value, CodeBlock content, boolean arrow) {
-        return new SwitchCases(Collections.singletonList(value), content, true, arrow);
+    public static SwitchCases inlined(String label, CodeBlock body, boolean arrow) {
+        return new SwitchCases(Collections.singletonList(label), body, true, arrow);
     }
 
     @Contract(value = "_, _ -> new", pure = true)
-    public static SwitchCases ofDefault(CodeBlock content, boolean arrow) {
-        return new SwitchCases(null, content, true, arrow);
+    public static SwitchCases ofDefault(CodeBlock body, boolean arrow) {
+        return new SwitchCases(null, body, true, arrow);
     }
 
     @Override
     public void emitCode(String indent, IndentUnit indentUnit, StringBuilder builder) {
         boolean needCurlyBrackets = false;
-        if (this.values != null && !this.inlined) {
-            for (String value : this.values) {
+        boolean indentBody = true;
+        if (this.labels != null && !this.inlined) {
+            for (String value : this.labels) {
                 builder.append(indent).append("case ").append(value).append(':');
                 builder.append('\n');
             }
         } else {
-            if (this.values != null) {
-                builder.append(indent).append("case ").append(String.join(", ", this.values));
+            if (this.labels != null) {
+                builder.append(indent).append("case ").append(String.join(", ", this.labels));
             } else {
                 builder.append(indent).append("default");
             }
 
             if (this.arrow) {
                 builder.append(" -> ");
-                if (this.content.fullLines().size() > 1) {
+                if (this.body.fullLines().size() > 1) {
                     needCurlyBrackets = true;
                 }
             } else {
@@ -81,10 +82,14 @@ public record SwitchCases(@Nullable List<String> values, CodeBlock content, bool
             if (needCurlyBrackets) {
                 builder.append('{');
             }
-            builder.append('\n');
+            if (needCurlyBrackets || !this.arrow) {
+                builder.append('\n');
+            } else {
+                indentBody = false;
+            }
         }
 
-        this.content.emitCode(indent + indentUnit.content(), indentUnit, builder);
+        this.body.emitCode(indentBody ? indent + indentUnit.content() : "", indentUnit, builder);
 
         if (needCurlyBrackets) {
             builder.append(indent).append('}');
@@ -94,9 +99,9 @@ public record SwitchCases(@Nullable List<String> values, CodeBlock content, bool
 
     public static final class SwitchCasesChain {
 
-        private final Set<String> values = new HashSet<>();
+        private final Set<String> labels = new HashSet<>();
         private @Nullable Comparator<? super String> comparator;
-        private @MonotonicNonNull CodeBlock content;
+        private @MonotonicNonNull CodeBlock body;
         private boolean inlined;
         private boolean arrow;
 
@@ -104,24 +109,24 @@ public record SwitchCases(@Nullable List<String> values, CodeBlock content, bool
         }
 
         @Contract(value = "_ -> this", mutates = "this")
-        public SwitchCasesChain add(String value) {
-            this.values.add(value);
+        public SwitchCasesChain add(String label) {
+            this.labels.add(label);
             return this;
         }
 
         @Contract(value = "_ -> this", mutates = "this")
-        public SwitchCasesChain addAll(String... values) {
-            return addAll(Arrays.asList(values));
+        public SwitchCasesChain addAll(String... labels) {
+            return addAll(Arrays.asList(labels));
         }
 
         @Contract(value = "_ -> this", mutates = "this")
-        public SwitchCasesChain addAll(Collection<String> values) {
-            this.values.addAll(values);
+        public SwitchCasesChain addAll(Collection<String> labels) {
+            this.labels.addAll(labels);
             return this;
         }
 
         @Contract(value = "_ -> this", mutates = "this")
-        public SwitchCasesChain sortValues(Comparator<? super String> comparator) {
+        public SwitchCasesChain sortLabels(Comparator<? super String> comparator) {
             this.comparator = comparator;
             return this;
         }
@@ -134,24 +139,24 @@ public record SwitchCases(@Nullable List<String> values, CodeBlock content, bool
         }
 
         @Contract(value = "_ -> this", mutates = "this")
-        public SwitchCasesChain enclosingContent(String line) {
-            return enclosingContent(CodeBlock.of(line));
+        public SwitchCasesChain body(String line) {
+            return body(CodeBlock.of(line));
         }
 
         @Contract(value = "_ -> this", mutates = "this")
-        public SwitchCasesChain enclosingContent(CodeBlock content) {
-            this.content = content;
+        public SwitchCasesChain body(CodeBlock body) {
+            this.body = body;
             return this;
         }
 
         @Contract(value = "-> new", pure = true)
         public SwitchCases build() {
-            Preconditions.checkState(this.content != null, "Switch case must have a defined content.");
-            List<String> values = new ArrayList<>(this.values);
+            Preconditions.checkState(this.body != null, "Switch case must have a defined content.");
+            List<String> labels = new ArrayList<>(this.labels);
             if (this.comparator != null) {
-                values.sort(this.comparator);
+                labels.sort(this.comparator);
             }
-            return new SwitchCases(values, this.content, this.inlined, this.arrow);
+            return new SwitchCases(labels, this.body, this.inlined, this.arrow);
         }
     }
 }

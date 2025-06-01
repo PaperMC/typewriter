@@ -9,17 +9,17 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.UnaryOperator;
 
-public record EnumValue(String name, List<String> arguments, @Nullable CodeBlock body) implements CodeEmitter {
+public record EnumConstant(String name, List<String> arguments, @Nullable CodeBlock body) implements CodeEmitter {
 
-    public EnumValue(String name, List<String> arguments, @Nullable CodeBlock body) {
+    public EnumConstant(String name, List<String> arguments, @Nullable CodeBlock body) {
         this.name = name;
         this.arguments = List.copyOf(arguments);
         this.body = body;
     }
 
     @Contract(value = "_ -> new", pure = true)
-    public static EnumValue value(String name) {
-        return new EnumValue(name, Collections.emptyList(), null);
+    public static EnumConstant simple(String name) {
+        return new EnumConstant(name, Collections.emptyList(), null);
     }
 
     @Contract(value = "_ -> new", pure = true)
@@ -46,11 +46,15 @@ public record EnumValue(String name, List<String> arguments, @Nullable CodeBlock
 
         private final String name;
         private List<String> arguments = Collections.emptyList();
-        private UnaryOperator<String> nameTransformer = name -> name;
+        private UnaryOperator<String> nameTransformer = UnaryOperator.identity();
         private @Nullable CodeBlock body;
 
         private Builder(String name) {
             this.name = name;
+        }
+
+        public String initialName() {
+            return this.name;
         }
 
         @Contract(value = "_ -> this", mutates = "this")
@@ -82,8 +86,8 @@ public record EnumValue(String name, List<String> arguments, @Nullable CodeBlock
         }
 
         @Contract(value = "-> new", pure = true)
-        public EnumValue build() {
-            return new EnumValue(this.nameTransformer.apply(this.name), this.arguments, this.body);
+        public EnumConstant build() {
+            return new EnumConstant(this.nameTransformer.apply(this.name), this.arguments, this.body);
         }
     }
 }
