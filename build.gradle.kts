@@ -67,9 +67,9 @@ publishing {
     repositories {
         val isSnapshot = rootProject.version.toString().endsWith("-SNAPSHOT")
         val url = if (isSnapshot) {
-            "https://repo.papermc.io/repository/maven-snapshots/"
+            "https://artifactory.papermc.io/artifactory/snapshots/"
         } else {
-            "https://repo.papermc.io/repository/maven-releases/"
+            "https://artifactory.papermc.io/artifactory/releases/"
         }
         maven(url) {
             name = "papermc"
@@ -79,6 +79,7 @@ publishing {
 }
 
 tasks.register("printVersion") {
+    val version = project.version
     doFirst {
         println(version)
     }
