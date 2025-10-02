@@ -17,4 +17,7 @@ public final class ImportFilter {
     private static Predicate<ImportName> only(ImportCategory<?> category) {
         return type -> type.category() == category;
     }
+
+    private ImportFilter() {
+    }
 }

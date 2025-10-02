@@ -68,14 +68,14 @@ public class ParserTest {
         }
 
         TokenAccessor accessor = TokenAccessor.wrap(lexer);
-        assertKeyword(accessor.nextToken(CharSequenceToken.class), 0, TokenType.PACKAGE);
-        assertIdentifier(accessor.nextToken(CharSequenceToken.class), TokenType.PACKAGE.value.length() + 1, CONTAINER.relativize(path.getParent()).toString().replace('/', '.'));
+        assertIdentifier(accessor.nextToken(CharSequenceToken.class), 0, Keywords.PACKAGE);
+        assertIdentifier(accessor.nextToken(CharSequenceToken.class), Keywords.PACKAGE.length() + 1, CONTAINER.relativize(path.getParent()).toString().replace('/', '.'));
         assertSame(TokenType.SECO, accessor.nextToken().type());
 
         int offset = 0;
         for (Modifier modifier : classModifiers) {
             String value = modifier.toString();
-            assertIdentifier(accessor.nextToken(CharSequenceToken.class), offset, TokenType.fromValue(value, TokenType.IDENTIFIER), value);
+            assertIdentifier(accessor.nextToken(CharSequenceToken.class), offset, value);
             offset += value.length() + 1; // expect one space between tokens
         }
 

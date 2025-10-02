@@ -1,6 +1,6 @@
 package io.papermc.typewriter.context;
 
-import io.papermc.typewriter.parser.token.TokenType;
+import io.papermc.typewriter.parser.Keywords;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.framework.qual.DefaultQualifier;
@@ -12,7 +12,7 @@ import java.util.function.Function;
 public class ImportCategory<T extends ImportName> {
 
     public static final ImportCategory<ImportName.Type> TYPE = new ImportCategory<>(ImportName.Type::fromQualifiedName, null);
-    public static final ImportCategory<ImportName.Static> STATIC = new ImportCategory<>(ImportName.Static::fromQualifiedMemberName, TokenType.STATIC.value);
+    public static final ImportCategory<ImportName.Static> STATIC = new ImportCategory<>(ImportName.Static::fromQualifiedMemberName, Keywords.STATIC);
 
     private final Function<String, T> fromUnsafeName;
     private final Optional<String> identity;

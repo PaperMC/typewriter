@@ -16,6 +16,7 @@ import io.papermc.typewriter.parser.token.pos.TokenRecorder;
 import java.util.EnumSet;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 public final class ImportParser {
 
@@ -28,13 +29,13 @@ public final class ImportParser {
 
     public static void collectImports(Tokenizer tokenizer, ImportCollector collector, SourceFile source) {
         SequenceTokens.wrap(tokenizer, FORMAT_TOKENS)
-            .skip(TokenType.PACKAGE, action -> { // package <qualified name>;
+            .skipIdentifier(Predicate.isEqual(Keywords.PACKAGE), action -> { // package <qualified name>;
                 action.skipQualifiedName().skip(TokenType.SECO);
             }, TokenTaskBuilder::asOptional) // for default package
-            .skip(TokenType.IMPORT, action -> {
+            .skipIdentifier(Predicate.isEqual(Keywords.IMPORT), action -> {
                 ProtoImportName protoName = new ProtoImportName();
                 action
-                    .map(TokenType.STATIC, stat -> protoName.asCategory(ImportCategory.STATIC), TokenTaskBuilder::asOptional)
+                    .mapIdentifier(Predicate.isEqual(Keywords.STATIC), stat -> protoName.asCategory(ImportCategory.STATIC), TokenTaskBuilder::asOptional)
                     .mapQualifiedName(
                         name -> protoName.append(name.value()),
                         dot -> protoName.appendSeparator(),
@@ -56,12 +57,12 @@ public final class ImportParser {
     public static TokenCapture trackImportPosition(Tokenizer tokenizer) {
         TokenRecorder.Default<PrintableToken> tokenPos = TokenRecorder.BETWEEN_TOKEN.record();
         SequenceTokens.wrap(tokenizer, FORMAT_TOKENS)
-            .skip(TokenType.PACKAGE, action -> { // package <qualified name>;
+            .skipIdentifier(Predicate.isEqual(Keywords.PACKAGE), action -> { // package <qualified name>;
                 action.skipQualifiedName().skip(TokenType.SECO);
             }, TokenTaskBuilder::asOptional) // for default package
-            .skip(TokenType.IMPORT, action -> {
+            .skipIdentifier(Predicate.isEqual(Keywords.IMPORT), action -> {
                 action
-                    .skip(TokenType.STATIC, TokenTaskBuilder::asOptional)
+                    .skipIdentifier(Predicate.isEqual(Keywords.STATIC), TokenTaskBuilder::asOptional)
                     .skipQualifiedName((Consumer<SequenceTokens>) (partialAction) -> partialAction.skip(TokenType.STAR))
                     .map(TokenType.SECO, tokenPos::end);
                 },

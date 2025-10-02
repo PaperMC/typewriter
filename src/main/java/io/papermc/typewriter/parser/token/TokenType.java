@@ -1,13 +1,6 @@
 package io.papermc.typewriter.parser.token;
 
 public enum TokenType {
-    // keywords
-    PACKAGE("package"),
-    IMPORT("import"),
-    STATIC("static"),
-    PUBLIC("public"),
-    FINAL("final"),
-    INTERFACE("interface"),
     // literals
     CHAR(null),
     STRING(null),
@@ -37,14 +30,5 @@ public enum TokenType {
     public final String value;
     TokenType(String value) {
         this.value = value;
-    }
-
-    public static TokenType fromValue(String value, TokenType def) {
-        for (TokenType type : TokenType.values()) {
-            if (type.value != null && type.value.equals(value)) {
-                return type;
-            }
-        }
-        return def;
     }
 }

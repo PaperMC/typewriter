@@ -5,8 +5,8 @@ import com.google.common.base.Suppliers;
 import io.papermc.typewriter.ClassNamed;
 import io.papermc.typewriter.context.layout.ImportLayout;
 import io.papermc.typewriter.context.layout.ImportScheme;
+import io.papermc.typewriter.parser.Keywords;
 import io.papermc.typewriter.parser.name.ProtoImportName;
-import io.papermc.typewriter.parser.token.TokenType;
 import javax.lang.model.SourceVersion;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -170,7 +170,7 @@ public class ImportNameCollector implements ImportCollector {
 
 
     private void printImportStatement(StringBuilder builder, ImportName type) {
-        builder.append(TokenType.IMPORT.value);
+        builder.append(Keywords.IMPORT);
         builder.append(" ");
         type.category().identity().ifPresent(name -> {
             builder.append(name).append(' ');

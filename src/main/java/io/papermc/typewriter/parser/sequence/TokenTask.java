@@ -6,7 +6,6 @@ import io.papermc.typewriter.parser.sequence.hook.HookManager;
 import io.papermc.typewriter.parser.sequence.hook.HookType;
 import io.papermc.typewriter.parser.sequence.hook.Hooks;
 import io.papermc.typewriter.parser.token.PrintableToken;
-import io.papermc.typewriter.parser.token.Token;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import java.util.function.Consumer;
@@ -40,7 +39,7 @@ public class TokenTask implements TokenTaskThrowable {
         return alreadyRan;
     }
 
-    boolean run(Token token, SequenceTokens executor) {
+    boolean run(PrintableToken token, SequenceTokens executor) {
         return this.action.execute(token, executor);
     }
 
