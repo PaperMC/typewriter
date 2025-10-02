@@ -1,18 +1,22 @@
 package io.papermc.typewriter.context;
 
+import com.google.common.base.Preconditions;
 import io.papermc.typewriter.ClassNamed;
 import io.papermc.typewriter.parser.token.TokenType;
+import javax.lang.model.SourceVersion;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.framework.qual.DefaultQualifier;
 
 import java.util.Objects;
-import java.util.function.Supplier;
 
 import static io.papermc.typewriter.parser.name.ProtoQualifiedName.IDENTIFIER_SEPARATOR;
 
-public interface ImportName extends Comparable<ImportName> {
+@DefaultQualifier(NonNull.class)
+public sealed interface ImportName extends Comparable<ImportName> permits ImportName.Identified {
 
     String IMPORT_ON_DEMAND_MARKER = TokenType.STAR.value;
 
-    private static String asGlobal(String name) {
+    static String asWildcard(String name) {
         return dotJoin(name, IMPORT_ON_DEMAND_MARKER);
     }
 
@@ -22,54 +26,44 @@ public interface ImportName extends Comparable<ImportName> {
 
     /**
      * Gets the full import name including its package name and type/member name.
-     * It's includes the possible '*' in case of import on demand type
+     * This includes the possible '*' in case of import on demand type
      *
      * @return the full name
      */
     String name();
 
-    /**
-     * Gets the first identifier used to reference that import.
-     * Only relevant for single imports.
-     *
-     * @return the first identifier
-     */
-    String id();
-
-    boolean isGlobal();
-
     boolean newlyAdded();
 
-    ImportCategory category();
+    ImportCategory<?> category();
+
+    sealed interface Identified extends ImportName permits ImportName.Type, ImportName.Static {
+
+        /**
+         * Gets the first identifier used to reference that import.
+         * Only relevant for single imports.
+         *
+         * @return the first identifier
+         */
+        String id();
+
+        boolean isWildcard();
+    }
 
     @Override
     default int compareTo(ImportName other) {
         return this.name().compareTo(other.name());
     }
 
-    default boolean isImported(ClassNamed klass) {
-        return this.isImported(klass, klass::enclosing);
-    }
-
-    default boolean isImported(ClassNamed klass, Supplier<ClassNamed> enclosingKlass) {
-        if (this.isGlobal()) {
-            ClassNamed enclosing = enclosingKlass.get();
-            final String parentName = enclosing != null ? enclosing.canonicalName() : klass.packageName(); // handle package import
-            return asGlobal(parentName).equals(this.name());
-        }
-
-        return klass.canonicalName().equals(this.name());
-    }
-
-    record Type(String name, boolean isGlobal, boolean newlyAdded) implements ImportName {
+    record Type(String name, boolean isWildcard, boolean newlyAdded) implements Identified {
 
         public Type(ClassNamed className) {
             this(className.canonicalName(), false, true);
         }
 
         static Type fromQualifiedName(String qualifiedName) {
-            boolean isGlobal = qualifiedName.endsWith(IMPORT_ON_DEMAND_MARKER);
-            return new Type(qualifiedName, isGlobal, true);
+            Preconditions.checkArgument(SourceVersion.isName(qualifiedName), "Invalid import name '%s'", qualifiedName);
+            boolean isWildcard = qualifiedName.endsWith(IMPORT_ON_DEMAND_MARKER);
+            return new Type(qualifiedName, isWildcard, true);
         }
 
         @Override
@@ -79,7 +73,7 @@ public interface ImportName extends Comparable<ImportName> {
         }
 
         @Override
-        public ImportCategory category() {
+        public ImportCategory<Type> category() {
             return ImportCategory.TYPE;
         }
 
@@ -94,26 +88,27 @@ public interface ImportName extends Comparable<ImportName> {
             }
 
             Type other = (Type) obj;
-            return this.name.equals(other.name) && this.isGlobal == other.isGlobal;
+            return this.name.equals(other.name) && this.isWildcard == other.isWildcard;
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(this.name, this.isGlobal);
+            return Objects.hash(this.name, this.isWildcard);
         }
     }
 
-    record Static(String name, String memberName, boolean isGlobal, boolean newlyAdded) implements ImportName {
+    record Static(String name, String memberName, boolean isWildcard, boolean newlyAdded) implements Identified {
 
         static Static fromQualifiedMemberName(String qualifiedMemberName) {
-            boolean isGlobal = qualifiedMemberName.endsWith(IMPORT_ON_DEMAND_MARKER);
+            Preconditions.checkArgument(SourceVersion.isName(qualifiedMemberName), "Invalid static import name '%s'", qualifiedMemberName);
+            boolean isWildcard = qualifiedMemberName.endsWith(IMPORT_ON_DEMAND_MARKER);
             final String memberName;
-            if (isGlobal) {
+            if (isWildcard) {
                 memberName = IMPORT_ON_DEMAND_MARKER;
             } else {
                 memberName = qualifiedMemberName.substring(qualifiedMemberName.lastIndexOf(IDENTIFIER_SEPARATOR) + 1);
             }
-            return new Static(qualifiedMemberName, memberName, isGlobal, true);
+            return new Static(qualifiedMemberName, memberName, isWildcard, true);
         }
 
         @Override
@@ -127,24 +122,24 @@ public interface ImportName extends Comparable<ImportName> {
                 return memberName;
             }
 
-            String parentClasses = this.name.substring(packageName.length() + 1, this.name.length() - (this.isGlobal ? 1 : this.memberName.length())); // pop * at the end
-            return memberName.substring(parentClasses.length());
+            String ownerClasses = this.name.substring(packageName.length() + 1, this.name.length() - this.memberName.length());
+            return memberName.substring(ownerClasses.length());
         }
 
         public boolean isMemberImported(String packageName, String memberName) {
-            if (this.isGlobal) {
+            if (this.isWildcard) {
                 int dotIndex = memberName.lastIndexOf(IDENTIFIER_SEPARATOR);
                 if (dotIndex == -1) {
-                    return asGlobal(packageName).equals(this.name);
+                    return asWildcard(packageName).equals(this.name);
                 }
-                return asGlobal(dotJoin(packageName, memberName.substring(0, dotIndex))).equals(this.name);
+                return asWildcard(dotJoin(packageName, memberName.substring(0, dotIndex))).equals(this.name);
             }
 
             return dotJoin(packageName, memberName).equals(this.name);
         }
 
         @Override
-        public ImportCategory category() {
+        public ImportCategory<Static> category() {
             return ImportCategory.STATIC;
         }
 
@@ -159,12 +154,12 @@ public interface ImportName extends Comparable<ImportName> {
             }
 
             Static other = (Static) obj;
-            return this.name.equals(other.name) && this.isGlobal == other.isGlobal;
+            return this.name.equals(other.name) && this.isWildcard == other.isWildcard;
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(this.name, this.isGlobal);
+            return Objects.hash(this.name, this.isWildcard);
         }
     }
 }

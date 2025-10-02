@@ -1,21 +1,22 @@
 package io.papermc.typewriter.context;
 
 import io.papermc.typewriter.ClassNamed;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.framework.qual.DefaultQualifier;
 
+import static io.papermc.typewriter.context.ImportName.dotJoin;
+
+@DefaultQualifier(NonNull.class)
 public interface ImportCollector {
 
     ImportCollector NO_OP = new ImportCollector() { // only used for dump
 
         @Override
-        public void addImport(ClassNamed type) {
+        public void addSingleImport(ClassNamed type) {
         }
 
         @Override
-        public void addImport(String name) {
-        }
-
-        @Override
-        public void addStaticImport(String name) {
+        public void addImport(ImportCategory<? extends ImportName> category, String name) {
         }
 
         @Override
@@ -25,7 +26,7 @@ public interface ImportCollector {
 
         @Override
         public String getStaticMemberShortName(String packageName, String memberName) {
-            return ImportName.dotJoin(packageName, memberName);
+            return dotJoin(packageName, memberName);
         }
 
         @Override
@@ -34,22 +35,16 @@ public interface ImportCollector {
         }
     };
 
-    default void addImport(Class<?> type) {
-        this.addImport(new ClassNamed(type));
-    }
+    void addSingleImport(ClassNamed type);
 
-    void addImport(ClassNamed type);
-
-    void addImport(String name);
-
-    void addStaticImport(String name);
+    void addImport(ImportCategory<? extends ImportName> category, String name);
 
     boolean canImportSafely(ClassNamed type);
 
     String getStaticMemberShortName(String packageName, String memberName);
 
     default String getShortName(Class<?> type) {
-        return this.getShortName(new ClassNamed(type));
+        return this.getShortName(ClassNamed.of(type));
     }
 
     default String getShortName(ClassNamed type) {
@@ -57,7 +52,7 @@ public interface ImportCollector {
     }
 
     default String getShortName(Class<?> type, boolean autoImport) {
-        return this.getShortName(new ClassNamed(type), autoImport);
+        return this.getShortName(ClassNamed.of(type), autoImport);
     }
 
     String getShortName(ClassNamed type, boolean autoImport);

@@ -1,5 +1,6 @@
 package io.papermc.typewriter.context;
 
+import io.papermc.typewriter.context.layout.ImportLayout;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.framework.qual.DefaultQualifier;
 
@@ -8,11 +9,11 @@ import java.util.Optional;
 /**
  * A file metadata for a specific source file registered through a {@link io.papermc.typewriter.registration.SourceSetRewriter}.
  *
- * @param header the import header
+ * @param layout the import layout
  * @param indentUnit the indent unit used
  */
 @DefaultQualifier(NonNull.class)
-public record FileMetadata(Optional<ImportLayout.Header> header, Optional<IndentUnit> indentUnit) {
+public record FileMetadata(Optional<ImportLayout> layout, Optional<IndentUnit> indentUnit) {
 
     /**
      * Constructs a file metadata with a specified indent unit.
@@ -25,12 +26,12 @@ public record FileMetadata(Optional<ImportLayout.Header> header, Optional<Indent
     }
 
     /**
-     * Constructs a file metadata with a specified import header.
+     * Constructs a file metadata with a specified import layout.
      *
-     * @param header the import header
+     * @param layout the import layout
      * @return the file metadata
      */
-    public static FileMetadata layout(ImportLayout.Header header) {
-        return new FileMetadata(Optional.of(header), Optional.empty());
+    public static FileMetadata layout(ImportLayout layout) {
+        return new FileMetadata(Optional.of(layout), Optional.empty());
     }
 }

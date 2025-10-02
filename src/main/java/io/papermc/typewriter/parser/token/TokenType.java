@@ -1,7 +1,5 @@
 package io.papermc.typewriter.parser.token;
 
-import org.jetbrains.annotations.ApiStatus;
-
 public enum TokenType {
     // keywords
     PACKAGE("package"),

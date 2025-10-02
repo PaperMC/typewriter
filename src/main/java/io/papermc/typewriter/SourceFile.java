@@ -37,7 +37,7 @@ public record SourceFile(ClassNamed mainClass, Path path, Optional<FileMetadata>
 
     @Contract(value = "_, _ -> new", pure = true)
     public static SourceFile of(Class<?> mainClass, @Nullable FileMetadata metadata) {
-        return of(new ClassNamed(mainClass), metadata);
+        return of(ClassNamed.of(mainClass), metadata);
     }
 
     @Contract(value = "_ -> new", pure = true)

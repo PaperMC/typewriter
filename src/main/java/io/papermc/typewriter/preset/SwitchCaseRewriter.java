@@ -1,7 +1,6 @@
 package io.papermc.typewriter.preset;
 
 import com.google.common.base.Preconditions;
-import io.papermc.typewriter.SourceFile;
 import io.papermc.typewriter.replace.SearchMetadata;
 import io.papermc.typewriter.replace.SearchReplaceRewriter;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;

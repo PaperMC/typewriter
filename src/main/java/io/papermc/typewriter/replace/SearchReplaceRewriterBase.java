@@ -1,14 +1,14 @@
 package io.papermc.typewriter.replace;
 
 import com.google.common.base.Preconditions;
-import io.papermc.typewriter.context.FileMetadata;
-import io.papermc.typewriter.context.SourcesMetadata;
-import io.papermc.typewriter.context.ImportLayout;
-import io.papermc.typewriter.context.IndentUnit;
 import io.papermc.typewriter.SourceFile;
 import io.papermc.typewriter.SourceRewriter;
+import io.papermc.typewriter.context.FileMetadata;
 import io.papermc.typewriter.context.ImportCollector;
 import io.papermc.typewriter.context.ImportNameCollector;
+import io.papermc.typewriter.context.IndentUnit;
+import io.papermc.typewriter.context.SourcesMetadata;
+import io.papermc.typewriter.context.layout.ImportLayout;
 import io.papermc.typewriter.parser.ImportParser;
 import io.papermc.typewriter.parser.Lexer;
 import io.papermc.typewriter.parser.StringReader;
@@ -66,7 +66,7 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
 
             if (collector.isModified()) { // if added entries
                 // rewrite the imports
-                this.rewriteImports(collector, file.metadata().flatMap(FileMetadata::header).orElseGet(() -> sourcesMetadata.importLayout().getRelevantHeader(path, ImportLayout.Header.DEFAULT)), content);
+                this.rewriteImports(collector, file.metadata().flatMap(FileMetadata::layout).orElseGet(() -> sourcesMetadata.importLayoutMap().getRelevantLayout(path)), content);
             }
             destinationPath = path;
         } else {
@@ -210,10 +210,10 @@ public abstract class SearchReplaceRewriterBase implements SourceRewriter {
         }
     }
 
-    private void rewriteImports(ImportNameCollector collector, ImportLayout.Header header, StringBuilder into) {
+    private void rewriteImports(ImportNameCollector collector, ImportLayout layout, StringBuilder into) {
         Lexer lex = new Lexer(into.toString().toCharArray());
         TokenCapture position = ImportParser.trackImportPosition(lex); // need to retrack this just in case other rewriters moved things around
-        into.replace(position.start().cursor(), position.end().cursor(), collector.writeImports(header));
+        into.replace(position.start().cursor(), position.end().cursor(), collector.writeImports(layout));
     }
 
     @VisibleForTesting

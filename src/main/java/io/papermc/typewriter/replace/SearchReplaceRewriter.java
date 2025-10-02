@@ -1,11 +1,13 @@
 package io.papermc.typewriter.replace;
 
 import com.google.common.base.Preconditions;
-import io.papermc.typewriter.context.FileMetadata;
-import io.papermc.typewriter.context.SourcesMetadata;
-import io.papermc.typewriter.context.IndentUnit;
 import io.papermc.typewriter.SourceFile;
+import io.papermc.typewriter.context.FileMetadata;
 import io.papermc.typewriter.context.ImportCollector;
+import io.papermc.typewriter.context.IndentUnit;
+import io.papermc.typewriter.context.SourcesMetadata;
+import io.papermc.typewriter.parser.Lexer;
+import io.papermc.typewriter.parser.Tokenizer;
 import io.papermc.typewriter.util.ClassNamedView;
 import io.papermc.typewriter.util.ClassResolver;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
@@ -41,6 +43,10 @@ public class SearchReplaceRewriter extends SearchReplaceRewriterBase {
 
     public IndentUnit indentUnit() {
         return this.source.metadata().flatMap(FileMetadata::indentUnit).orElse(this.sourcesMetadata.indentUnit());
+    }
+
+    public Tokenizer createTokenizer(String content) {
+        return new Lexer(content.toCharArray());
     }
 
     @Contract(value = "_ -> this", mutates = "this")
@@ -82,7 +88,7 @@ public class SearchReplaceRewriter extends SearchReplaceRewriterBase {
     @Override
     public boolean registerFor(SourceFile file) {
         if (this.options == null) {
-            LOGGER.error("Replace options are not defined, skipping the rewriter: {}", this.getName());
+            LOGGER.error("Replace options are not defined, skipping the rewriter for class: {}", file.mainClass().dottedNestedName());
             return false;
         }
 

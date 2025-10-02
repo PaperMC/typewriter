@@ -1,25 +1,27 @@
 package io.papermc.typewriter.parser.name;
 
+import io.papermc.typewriter.context.ImportCategory;
+
 public class ProtoImportName extends ProtoQualifiedName {
 
-    private boolean isStatic;
-    private boolean isGlobal;
+    private ImportCategory<?> category = ImportCategory.TYPE;
+    private boolean isWilddcard;
     private String staticMemberName;
 
-    public boolean isStatic() {
-        return this.isStatic;
+    public ImportCategory<?> getCategory() {
+        return this.category;
     }
 
-    public boolean isGlobal() {
-        return this.isGlobal;
+    public boolean isWilddcard() {
+        return this.isWilddcard;
     }
 
-    public void asStatic() {
-        this.isStatic = true;
+    public void asCategory(ImportCategory<?> category) {
+        this.category = category;
     }
 
-    public void asGlobal() {
-        this.isGlobal = true;
+    public void asWildcard() {
+        this.isWilddcard = true;
     }
 
     public String getStaticMemberName() {
@@ -29,7 +31,7 @@ public class ProtoImportName extends ProtoQualifiedName {
     @Override
     public void append(String identifier) {
         super.append(identifier);
-        if (this.isStatic) {
+        if (this.category == ImportCategory.STATIC) {
             this.staticMemberName = identifier;
         }
     }

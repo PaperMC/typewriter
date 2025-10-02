@@ -1,15 +1,15 @@
 package io.papermc.typewriter.parser;
 
 import io.papermc.typewriter.parser.exception.LexerException;
-import io.papermc.typewriter.parser.token.pos.AbsolutePos;
-import io.papermc.typewriter.parser.token.pos.TokenCapture;
-import io.papermc.typewriter.parser.token.pos.TokenRecorder;
-import io.papermc.typewriter.parser.token.pos.TokenSnapshot;
 import io.papermc.typewriter.parser.token.CharSequenceBlockToken;
 import io.papermc.typewriter.parser.token.CharSequenceToken;
 import io.papermc.typewriter.parser.token.CharToken;
 import io.papermc.typewriter.parser.token.Token;
 import io.papermc.typewriter.parser.token.TokenType;
+import io.papermc.typewriter.parser.token.pos.AbsolutePos;
+import io.papermc.typewriter.parser.token.pos.TokenCapture;
+import io.papermc.typewriter.parser.token.pos.TokenRecorder;
+import io.papermc.typewriter.parser.token.pos.TokenSnapshot;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.io.CharArrayWriter;

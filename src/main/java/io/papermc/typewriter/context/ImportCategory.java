@@ -1,32 +1,32 @@
 package io.papermc.typewriter.context;
 
-import java.util.function.Predicate;
-import java.util.function.Supplier;
-import java.util.regex.Pattern;
+import io.papermc.typewriter.parser.token.TokenType;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
+import org.checkerframework.framework.qual.DefaultQualifier;
 
-public enum ImportCategory {
-    TYPE(ImportName.Type.class::isInstance),
-    STATIC(ImportName.Static.class::isInstance);
+import java.util.Optional;
+import java.util.function.Function;
 
-    private final Predicate<ImportName> filter;
+@DefaultQualifier(NonNull.class)
+public class ImportCategory<T extends ImportName> {
 
-    ImportCategory(Predicate<ImportName> filter) {
-        this.filter = filter;
+    public static final ImportCategory<ImportName.Type> TYPE = new ImportCategory<>(ImportName.Type::fromQualifiedName, null);
+    public static final ImportCategory<ImportName.Static> STATIC = new ImportCategory<>(ImportName.Static::fromQualifiedMemberName, TokenType.STATIC.value);
+
+    private final Function<String, T> fromUnsafeName;
+    private final Optional<String> identity;
+
+    private ImportCategory(Function<String, T> fromUnsafeName, @Nullable String identity) {
+        this.fromUnsafeName = fromUnsafeName;
+        this.identity = Optional.ofNullable(identity);
     }
 
-    public ImportLayout.PackageFilter allOther() {
-        return ImportLayout.PackageFilter.wrap(this.filter);
+    T parse(String name) {
+        return this.fromUnsafeName.apply(name);
     }
 
-    public ImportLayout.PackageFilter startsWith(String prefix) {
-        return ImportLayout.PackageFilter.wrap(this.filter.and(type -> type.name().startsWith(prefix)));
-    }
-
-    public ImportLayout.PackageFilter endsWith(String suffix) {
-        return ImportLayout.PackageFilter.wrap(this.filter.and(type -> type.name().endsWith(suffix)));
-    }
-
-    public ImportLayout.PackageFilter matches(Supplier<Pattern> regex) { // supplier must be a memoizer or a constant
-        return ImportLayout.PackageFilter.wrap(this.filter.and(type -> regex.get().matcher(type.name()).find()));
+    public Optional<String> identity() {
+        return this.identity;
     }
 }

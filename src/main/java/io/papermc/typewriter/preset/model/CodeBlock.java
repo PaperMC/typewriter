@@ -8,7 +8,10 @@ import org.jetbrains.annotations.Contract;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.NavigableMap;
 import java.util.Objects;
+import java.util.TreeMap;
 import java.util.regex.Pattern;
 
 public class CodeBlock implements CodeEmitter {
@@ -163,5 +166,30 @@ public class CodeBlock implements CodeEmitter {
     @Override
     public int hashCode() {
         return Objects.hash(this.lines);
+    }
+
+    private static class IndentTokens {
+
+        private final NavigableMap<Integer, Integer> tokens = new TreeMap<>();
+        private int level;
+
+        void setLevel(int line, int level) {
+            if (this.level != level) {
+                this.tokens.put(line, level);
+                this.level = level;
+            }
+        }
+
+        int getLevel(int line) {
+            Map.Entry<Integer, Integer> entry = this.tokens.floorEntry(line);
+            if (entry == null) {
+                return 0; // no tokens, initial level
+            }
+            return entry.getValue();
+        }
+
+        boolean isEmpty() {
+            return this.tokens.isEmpty();
+        }
     }
 }

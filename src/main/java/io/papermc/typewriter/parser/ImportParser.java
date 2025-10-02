@@ -1,16 +1,17 @@
 package io.papermc.typewriter.parser;
 
 import io.papermc.typewriter.SourceFile;
+import io.papermc.typewriter.context.ImportCategory;
 import io.papermc.typewriter.context.ImportCollector;
 import io.papermc.typewriter.context.ImportNameCollector;
 import io.papermc.typewriter.parser.name.ProtoImportName;
 import io.papermc.typewriter.parser.sequence.SequenceTokens;
 import io.papermc.typewriter.parser.sequence.TokenTaskBuilder;
 import io.papermc.typewriter.parser.sequence.hook.HookType;
-import io.papermc.typewriter.parser.token.pos.TokenCapture;
-import io.papermc.typewriter.parser.token.pos.TokenRecorder;
 import io.papermc.typewriter.parser.token.PrintableToken;
 import io.papermc.typewriter.parser.token.TokenType;
+import io.papermc.typewriter.parser.token.pos.TokenCapture;
+import io.papermc.typewriter.parser.token.pos.TokenRecorder;
 
 import java.util.EnumSet;
 import java.util.Set;
@@ -33,14 +34,14 @@ public final class ImportParser {
             .skip(TokenType.IMPORT, action -> {
                 ProtoImportName protoName = new ProtoImportName();
                 action
-                    .map(TokenType.STATIC, stat -> protoName.asStatic(), TokenTaskBuilder::asOptional)
+                    .map(TokenType.STATIC, stat -> protoName.asCategory(ImportCategory.STATIC), TokenTaskBuilder::asOptional)
                     .mapQualifiedName(
                         name -> protoName.append(name.value()),
                         dot -> protoName.appendSeparator(),
                         partialAction -> partialAction
                             .map(TokenType.STAR, star -> {
                                 protoName.append(TokenType.STAR.value);
-                                protoName.asGlobal();
+                                protoName.asWildcard();
                             })
                     )
                     .map(TokenType.SECO, $ -> {

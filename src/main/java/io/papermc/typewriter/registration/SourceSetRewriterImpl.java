@@ -1,10 +1,12 @@
 package io.papermc.typewriter.registration;
 
-import io.papermc.typewriter.context.SourcesMetadata;
 import io.papermc.typewriter.SourceFile;
 import io.papermc.typewriter.SourceRewriter;
+import io.papermc.typewriter.context.SourcesMetadata;
 import io.papermc.typewriter.util.ClassNamedView;
 import io.papermc.typewriter.util.ClassResolver;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.framework.qual.DefaultQualifier;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -14,6 +16,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+@DefaultQualifier(NonNull.class)
 public class SourceSetRewriterImpl<T extends SourceSetRewriter<T>> implements SourceSetRewriter<T> {
 
     protected final Map<SourceFile, SourceRewriter> rewrites = new LinkedHashMap<>();
@@ -46,24 +49,22 @@ public class SourceSetRewriterImpl<T extends SourceSetRewriter<T>> implements So
     }
 
     private ClassResolver makeResolver(Set<Path> classpath) {
-        class Holder {
-            public static final ClassResolver NOOP = new NoopClassResolver();
-        }
         if (classpath.isEmpty()) {
-            return Holder.NOOP;
+            return NoopClassResolver.INSTANCE;
         }
 
         return new ClassResolver(classpath);
     }
 
     private static class NoopClassResolver extends ClassResolver {
+        public static final ClassResolver INSTANCE = new NoopClassResolver();
 
         public NoopClassResolver() {
             super(Collections.emptySet());
         }
 
         @Override
-        public Optional<Class<?>> tryFind(String name) {
+        public Optional<Class<?>> find(String name) {
             return Optional.empty();
         }
     }
