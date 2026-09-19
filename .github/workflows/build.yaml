@@ -11,10 +11,21 @@ jobs:
     name: Build
     runs-on: 'ubuntu-latest'
     steps:
-      - uses: actions/checkout@v5
+      - uses: namespacelabs/nscloud-checkout-action@v9
+      - name: Set up cache
+        uses: namespacelabs/nscloud-cache-action@v1
+        with:
+          cache: gradle
+      - name: Setup gradle build cache
+        run: |
+          nsc cache gradle setup --init-gradle /tmp/init.gradle
+      - name: Setup gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-disabled: true # namespace handles this
       - uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: 21
-      - uses: gradle/actions/setup-gradle@v4
-      - run: ./gradlew build --stacktrace --console=colored
+          cache: "" # namespace handles thi
+      - run: ./gradlew --init-script=/tmp/init.gradle build --stacktrace --console=colored
